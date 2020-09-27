@@ -40,6 +40,11 @@ jobs:
     - name: Build Rust binary
       run: cargo build --release --verbose
       working-directory: 'scrapertest'
-      
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: scrapertest
+        path: target/release/scrapertest
+
 #     - name: Run tests
 #       run: cargo test --verbose
