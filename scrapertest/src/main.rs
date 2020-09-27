@@ -239,6 +239,10 @@ impl Query {
   })
  }
 
+ async fn get_commit_hash() -> FieldResult<String> {
+  Ok(std::option_env!("GITHUB_SHA").unwrap_or("DEV").to_string())
+ }
+
  async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItem>> {
   let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
   let items: Vec<RcloneItem> = serde_json::from_str(&contents)?;
