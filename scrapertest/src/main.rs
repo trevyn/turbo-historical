@@ -37,7 +37,7 @@ mod tests {
 
   eprintln!("testing");
 
-  let config = CString::new(include_str!("rclone.conf")).unwrap();
+  let config = CString::new("").unwrap(); // rclone.conf
   unsafe {
    GoSetConfig(config.as_ptr());
   }
@@ -432,7 +432,7 @@ async fn main() {
  Bookmark::select_all();
  ResultItem::select_all();
 
- let config = CString::new(include_str!("rclone.conf")).unwrap();
+ let config = CString::new("").unwrap(); // rclone.conf
  unsafe {
   GoSetConfig(config.as_ptr());
  }
