@@ -1,0 +1,71 @@
+{
+ "//": "@apollo/client: apollo has done breaking changes in minor releases, review changelog for any minor release. dequal: possibly spammy, manually review any changes. typescript: project does not follow semver. react-beautiful-dnd: author is on hiatus, manually review any changes.",
+ "name": "my-app",
+ "version": "0.1.0",
+ "private": true,
+ "dependencies": {
+  "@apollo/client": "~3.2.0",
+  "@tailwindui/react": "^0.1.1",
+  "dequal": "=2.0.2",
+  "fast-deep-equal": "^3.1.3",
+  "graphql": "^15.3.0",
+  "history": "^5.0.0",
+  "luxon": "^1.25.0",
+  "pretty-bytes": "^5.4.1",
+  "react": "^16.13.1",
+  "react-beautiful-dnd": "=13.0.0",
+  "react-dom": "^16.13.1",
+  "react-router-dom": "^6.0.0-beta.0",
+  "react-scripts": "3.4.3",
+  "swr": "^0.3.2",
+  "ts-enum-util": "^4.0.2",
+  "ts-pattern": "^1.1.0"
+ },
+ "devDependencies": {
+  "@testing-library/jest-dom": "^5.11.4",
+  "@testing-library/react": "^11.0.4",
+  "@testing-library/user-event": "^12.1.5",
+  "@types/jest": "^26.0.13",
+  "@types/luxon": "^1.24.4",
+  "@types/node": "^14.10.2",
+  "@types/react": "^16.9.49",
+  "@types/react-dom": "^16.9.8",
+  "source-map-explorer": "^2.5.0",
+  "typescript": "~4.0.2",
+  "tailwindcss": "^1.8.10",
+  "@tailwindcss/ui": "^0.6.2",
+  "@graphql-codegen/cli": "^1.17.8",
+  "@graphql-codegen/introspection": "^1.17.8",
+  "@graphql-codegen/typescript": "^1.17.9",
+  "@graphql-codegen/typescript-operations": "^1.17.8",
+  "@graphql-codegen/typescript-react-apollo": "^2.0.6",
+  "get-graphql-schema": "^2.1.2"
+ },
+ "scripts": {
+  "start": "react-scripts start",
+  "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
+  "graphql-codegen": "node run-codegen.mjs && npx get-graphql-schema http://localhost:3020/graphql > ./graphql.schema",
+  "build": "react-scripts build && echo '/* /index.html  200' | cat > build/_redirects",
+  "reinstall-deps": "rm -rf node_modules && rm -rf package-lock.json && npm install",
+  "build:tailwind": "tailwindcss build src/tailwind.css -o src/tailwind.output.css",
+  "prestart": "npm run build:tailwind",
+  "prebuild": "NODE_ENV=production npm run build:tailwind",
+  "test": "react-scripts test",
+  "eject": "react-scripts eject"
+ },
+ "eslintConfig": {
+  "extends": "react-app"
+ },
+ "browserslist": {
+  "production": [
+   ">0.2%",
+   "not dead",
+   "not op_mini all"
+  ],
+  "development": [
+   "last 2 chrome version",
+   "last 2 firefox version",
+   "last 2 safari version"
+  ]
+ }
+}

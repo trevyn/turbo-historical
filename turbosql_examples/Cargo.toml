@@ -1,0 +1,8 @@
+[package]
+edition = "2018"
+name = "turbosql_examples"
+publish = false
+version = "0.0.0"
+
+[dependencies]
+turbosql = {path = "../turbosql"}

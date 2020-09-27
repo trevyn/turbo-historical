@@ -1,0 +1,52 @@
+schema {
+  query: Query
+  mutation: Mutations
+}
+
+type ActivityMonitor {
+  totalMemory: Int!
+  usedMemory: Int!
+  availableMemory: Int!
+  totalSwap: Int!
+  usedSwap: Int!
+}
+
+"""i53"""
+scalar i53
+
+type Mutations {
+  setHostAffection(host: String!, affection: Int!): String!
+  setBookmarked(url: String!, bookmarked: Boolean!): String!
+}
+
+type Query {
+  getBookmarks: [ResultItem!]!
+  search(query: String!, forceScrape: Boolean!): [ResultItem!]!
+  getActivityMonitor: ActivityMonitor!
+  getRcloneItems(path: String!): [RcloneItem!]!
+}
+
+type RcloneItem {
+  id: String
+  path: String
+  name: String
+  size: i53
+  mimeType: String
+  modTime: String
+  isDir: Boolean
+}
+
+type ResultItem {
+  url: String
+  searchHighlightedUrl: String
+  host: String
+  title: String
+  snippet: String
+  sourceQuery: String
+  sourceQueryUrl: String
+  sourceResultPos: Int
+  lastScraped: Float
+  bookmarked: Boolean
+  hostaffection: Int
+}
+

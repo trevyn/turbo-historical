@@ -1,0 +1,8 @@
+[workspace]
+members = [
+  "scrapertest",
+  "turbosql",
+  "turbosql_examples",
+  "turbosql_macros",
+  "monolith_wrapper",
+]

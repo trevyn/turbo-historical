@@ -1,0 +1,66 @@
+query getBookmarks {
+ getBookmarks
+ {
+  url
+  searchHighlightedUrl
+  host
+  title
+  snippet
+  sourceQuery
+  sourceQueryUrl
+  sourceResultPos
+  lastScraped
+  bookmarked
+  hostaffection
+ }
+}
+
+query search($query: String!, $forceScrape: Boolean!) {
+ search(query: $query, forceScrape: $forceScrape)
+ {
+  url
+  searchHighlightedUrl
+  host
+  title
+  snippet
+  sourceQuery
+  sourceQueryUrl
+  sourceResultPos
+  lastScraped
+  bookmarked
+  hostaffection
+ }
+}
+
+query getActivityMonitor {
+ getActivityMonitor
+ {
+  totalMemory
+  usedMemory
+  availableMemory
+  totalSwap
+  usedSwap
+ }
+}
+
+query getRcloneItems($path: String!) {
+ getRcloneItems(path: $path)
+ {
+  id
+  path
+  name
+  size
+  mimeType
+  modTime
+  isDir
+ }
+}
+
+mutation setHostAffection($host: String!, $affection: Int!) {
+ setHostAffection(host: $host, affection: $affection)
+}
+
+mutation setBookmarked($url: String!, $bookmarked: Boolean!) {
+ setBookmarked(url: $url, bookmarked: $bookmarked)
+}
+

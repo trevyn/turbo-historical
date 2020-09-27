@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* from the server; putting utility css classes in a server response feels weird */
+.search-highlight {
+ @apply bg-yellow-100;
+ @apply text-gray-800;
+}
+
+.search-highlight-url {
+ @apply bg-yellow-100;
+ @apply text-green-800;
+}
+
+/* for group-hover:text-indigo-500 hover:text-indigo-600 */
+.hover\:text-indigo-600:hover {
+ @apply text-indigo-600 !important;
+}
+
+.animate-ping2 {
+ animation-name: ping2;
+ animation-duration: 0.2s;
+ animation-iteration-count: 1;
+ /* cubic-bezier(0, 0, 0.2, 1) infinite; */
+}
+
+@keyframes ping2 {
+ 0% {
+  transform: scale(1);
+ }
+ 50% {
+  transform: scale(1.26);
+ }
+ 100% {
+  transform: scale(1);
+ }
+}
+
+.animate-ping3 {
+ animation-name: ping3;
+ animation-duration: 0.2s;
+ animation-iteration-count: 1;
+ /* cubic-bezier(0, 0, 0.2, 1) infinite; */
+}
+
+@keyframes ping3 {
+ 0% {
+  transform: scale(1);
+ }
+ 50% {
+  transform: scale(1.26);
+ }
+ 100% {
+  transform: scale(1);
+ }
+}

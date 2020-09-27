@@ -1,0 +1,30 @@
+[package]
+authors = ["Eden <rust@eden2.com>"]
+edition = "2018"
+name = "scrapertest"
+publish = false
+version = "0.0.0"
+
+[dependencies]
+# ammonia = {path = "../ammonia"}
+anyhow = "1.0.32"
+# html5ever = "0.24.1"
+clap = "3.0.0-beta.2"
+# maplit = "1.0.2"
+juniper = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
+juniper_warp = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
+log = "0.4.11"
+once_cell = "1.4.1"
+pretty_env_logger = "0.4.0"
+regex = "1.3.9"
+reqwest = "0.10.8"
+scraper = "0.12.0"
+serde = {version = "1.0.116", features = ["derive"]}
+serde_json = "1.0.57"
+sysinfo = "0.15.2"
+tokio = {version = "0.2.22", features = ["full"]}
+turbosql = {path = "../turbosql"}
+url = "2.1.1"
+urldecode = "=0.1.1"
+"ux" = {git = "https://github.com/1aim/uX", rev = "e17f5565d27bb4c1ebfd408329c7c075c58f0a0a", features = ["serde"]}
+warp = {version = "0.2.5", features = ["tls"]}

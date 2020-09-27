@@ -1,0 +1,18 @@
+[package]
+authors = ["Eden <rust@eden2.com>"]
+edition = "2018"
+name = "monolith_wrapper"
+publish = false
+version = "0.0.0"
+
+[dependencies]
+anyhow = "1.0.32"
+
+[dependencies.monolith]
+git = "https://github.com/Y2Z/monolith.git"
+tag = "v2.3.1"
+
+[dependencies.reqwest]
+default-features = false
+features = ["default-tls", "blocking", "gzip", "brotli"]
+version = "0.10.8"

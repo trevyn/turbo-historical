@@ -1,0 +1,4 @@
+[submodule "rclone"]
+	path = rclone
+	url = https://github.com/trevyn/rclone
+	branch = turbo
