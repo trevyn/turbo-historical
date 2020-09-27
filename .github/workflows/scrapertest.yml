@@ -22,11 +22,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: 'true'
       
     - name: Set up Go 1.15.2
       uses: actions/setup-go@v2
       with:
         go-version: '1.15.2'
+
+    - name: Show working dir
+      run: pwd
+      working-directory: 'rclone'
+
+    - name: Show ls
+      run: ls
+      working-directory: 'rclone'
 
     - name: Build rclone lib
       run: ./build-turbo.sh
