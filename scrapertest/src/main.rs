@@ -25,6 +25,10 @@ extern "C" {
  fn GoFetchFiledata(path: *const c_char, startbytepos: c_longlong, endbytepos: c_longlong);
 }
 
+#[derive(rust_embed::RustEmbed)]
+#[folder = "../turbo_frontend/build"]
+struct Asset;
+
 // CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)
 
 #[cfg(test)]
@@ -430,6 +434,9 @@ async fn main() {
  std::env::set_var("RUST_LOG", "scrapertest");
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");
+
+ let index_html = Asset::get("index.html").unwrap();
+ println!("{:?}", std::str::from_utf8(index_html.as_ref()));
 
  execute!("CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)").ok();
  HostAffection::select_all();
