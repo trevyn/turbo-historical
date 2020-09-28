@@ -47,7 +47,7 @@
   "graphql-codegen": "node run-codegen.mjs && npx get-graphql-schema http://localhost:3020/graphql > ./graphql.schema",
   "build": "react-scripts build && echo '/* /index.html  200' | cat > build/_redirects",
   "reinstall-deps": "rm -rf node_modules && rm -rf package-lock.json && npm install",
-  "build:tailwind": "tailwindcss build src/tailwind.css -o src/tailwind.output.css",
+  "build:tailwind": "npx tailwindcss build src/tailwind.css -o src/tailwind.output.css",
   "prestart": "npm run build:tailwind",
   "prebuild": "NODE_ENV=production npm run build:tailwind",
   "test": "react-scripts test",
