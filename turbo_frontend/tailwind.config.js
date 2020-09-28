@@ -27,5 +27,8 @@ module.exports = {
   removeDeprecatedGapUtilities: true,
   purgeLayersByDefault: true,
  },
+ // experimental: {
+ //  uniformColorPalette: true,
+ // },
  plugins: [require("@tailwindcss/ui")],
 };
