@@ -33,12 +33,14 @@ jobs:
     
     - run: go1.15.2 download
 
-    - name: Build rclone lib
+    - run: npm run build
+      working-directory: 'turbo_frontend'
+
+    - name: build rclone lib
       run: ./build-turbo.sh
       working-directory: 'rclone'
    
-    - name: Build Rust binary
-      run: cargo build --release --verbose
+    - run: cargo build --release --verbose
       working-directory: 'scrapertest'
 
     - uses: actions/upload-artifact@v2
