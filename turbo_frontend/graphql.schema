@@ -23,6 +23,7 @@ type Query {
   getBookmarks: [ResultItem!]!
   search(query: String!, forceScrape: Boolean!): [ResultItem!]!
   getActivityMonitor: ActivityMonitor!
+  getCommitHash: String!
   getRcloneItems(path: String!): [RcloneItem!]!
 }
 

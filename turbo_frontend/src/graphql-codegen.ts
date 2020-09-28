@@ -54,6 +54,7 @@ export type Query = {
   getBookmarks: Array<ResultItem>;
   search: Array<ResultItem>;
   getActivityMonitor: ActivityMonitor;
+  getCommitHash: Scalars['String'];
   getRcloneItems: Array<RcloneItem>;
 };
 
@@ -121,6 +122,14 @@ export type GetActivityMonitorQuery = (
     { __typename?: 'ActivityMonitor' }
     & Pick<ActivityMonitor, 'totalMemory' | 'usedMemory' | 'availableMemory' | 'totalSwap' | 'usedSwap'>
   ) }
+);
+
+export type GetCommitHashQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetCommitHashQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'getCommitHash'>
 );
 
 export type GetRcloneItemsQueryVariables = Exact<{
@@ -281,6 +290,36 @@ export function useGetActivityMonitorLazyQuery(baseOptions?: ApolloReactHooks.La
 export type GetActivityMonitorQueryHookResult = ReturnType<typeof useGetActivityMonitorQuery>;
 export type GetActivityMonitorLazyQueryHookResult = ReturnType<typeof useGetActivityMonitorLazyQuery>;
 export type GetActivityMonitorQueryResult = Apollo.QueryResult<GetActivityMonitorQuery, GetActivityMonitorQueryVariables>;
+export const GetCommitHashDocument = gql`
+    query getCommitHash {
+  getCommitHash
+}
+    `;
+
+/**
+ * __useGetCommitHashQuery__
+ *
+ * To run a query within a React component, call `useGetCommitHashQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetCommitHashQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetCommitHashQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetCommitHashQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GetCommitHashQuery, GetCommitHashQueryVariables>) {
+        return ApolloReactHooks.useQuery<GetCommitHashQuery, GetCommitHashQueryVariables>(GetCommitHashDocument, baseOptions);
+      }
+export function useGetCommitHashLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GetCommitHashQuery, GetCommitHashQueryVariables>) {
+          return ApolloReactHooks.useLazyQuery<GetCommitHashQuery, GetCommitHashQueryVariables>(GetCommitHashDocument, baseOptions);
+        }
+export type GetCommitHashQueryHookResult = ReturnType<typeof useGetCommitHashQuery>;
+export type GetCommitHashLazyQueryHookResult = ReturnType<typeof useGetCommitHashLazyQuery>;
+export type GetCommitHashQueryResult = Apollo.QueryResult<GetCommitHashQuery, GetCommitHashQueryVariables>;
 export const GetRcloneItemsDocument = gql`
     query getRcloneItems($path: String!) {
   getRcloneItems(path: $path) {

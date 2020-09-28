@@ -43,6 +43,10 @@ query getActivityMonitor {
  }
 }
 
+query getCommitHash {
+ getCommitHash
+}
+
 query getRcloneItems($path: String!) {
  getRcloneItems(path: $path)
  {
