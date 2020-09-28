@@ -6,3 +6,9 @@ members = [
   "turbosql_macros",
   "monolith_wrapper",
 ]
+
+[profile.release]
+codegen-units = 1 # Reduce number of codegen units to increase optimizations.
+lto = true # Enable Link Time Optimization
+opt-level = 'z' # Optimize for size.
+panic = 'abort' # Abort on panic
