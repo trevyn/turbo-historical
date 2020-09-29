@@ -47,7 +47,9 @@ pub use rusqlite::{
 };
 #[doc(hidden)]
 pub use serde::Serialize;
-pub use turbosql_macros::{execute, execute_unchecked, select, select_unchecked, Turbosql};
+pub use turbosql_macros::{
+ execute, execute_unchecked, select, select_cte, select_cte_unchecked, select_unchecked, Turbosql,
+};
 
 /// Wrapper for `Vec<u8>` that provides `Read`, `Write` and `Seek` traits.
 pub type Blob = Vec<u8>;

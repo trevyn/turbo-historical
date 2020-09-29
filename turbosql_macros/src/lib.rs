@@ -109,6 +109,16 @@ struct SelectUncheckedTokens {
 }
 
 #[derive(Debug)]
+struct SelectCTECheckedTokens {
+ tokens: proc_macro2::TokenStream,
+}
+
+#[derive(Debug)]
+struct SelectCTEUncheckedTokens {
+ tokens: proc_macro2::TokenStream,
+}
+
+#[derive(Debug)]
 struct ExecuteCheckedTokens {
  tokens: proc_macro2::TokenStream,
 }
@@ -215,23 +225,20 @@ impl MembersAndCasters {
 }
 
 fn extract_explicit_members(sql: &str) -> MembersAndCasters {
- let members: Vec<_> =
-  onig::Regex::new("(?<!.* [Ff][Rr][Oo][Mm] .*)[a-zA-Z_][a-zA-Z_0-9]*_(String|i64|i32|bool)")
-   .unwrap()
-   .captures_iter(&sql.replace("\n", " ")) // Newlines break the lookbehind
-   .enumerate()
-   .map(|(i, cap)| {
-    let col_name = cap.at(0).unwrap();
-    let mut parts: Vec<_> = col_name.split("_").collect();
-    let ty = parts.pop().unwrap();
-    let name = parts.join("_");
-    (format_ident!("{}", name), format_ident!("{}", ty), i)
-   })
-   .collect();
-
- // let struct_members: Vec<_> = members.iter().map(|(name, ty, _i)| quote!(#name: #ty)).collect();
- // let row_casters =
- //  members.iter().map(|(name, _ty, i)| quote!(#name: row.get(#i).unwrap())).collect::<Vec<_>>();
+ let members: Vec<_> = onig::Regex::new(
+  r"(?<!.*\s[Ff][Rr][Oo][Mm]\s.*)[a-zA-Z_][a-zA-Z_0-9]*_(String|f64|i64|i32|bool)",
+ )
+ .unwrap()
+ .captures_iter(&sql.replace("\n", " ")) // Newlines break the lookbehind
+ .enumerate()
+ .map(|(i, cap)| {
+  let col_name = cap.at(0).unwrap();
+  let mut parts: Vec<_> = col_name.split("_").collect();
+  let ty = parts.pop().unwrap();
+  let name = parts.join("_");
+  (format_ident!("{}", name), format_ident!("{}", ty), i)
+ })
+ .collect();
 
  MembersAndCasters::create(members)
 }
@@ -275,10 +282,11 @@ fn extract_stmt_members(stmt: &Statement, span: &Span) -> MembersAndCasters {
 }
 
 enum ParseStatementType {
- Select,
  Execute,
+ Select,
+ SelectCTE,
 }
-use ParseStatementType::{Execute, Select};
+use ParseStatementType::{Execute, Select, SelectCTE};
 
 enum ParseCheckedType {
  Checked,
@@ -291,16 +299,16 @@ fn do_parse_tokens(
  statement_type: ParseStatementType,
  checked: ParseCheckedType,
 ) -> syn::Result<proc_macro2::TokenStream> {
- let mut span = input.span();
+ let span = input.span();
  let test_db = TEST_DB.lock().unwrap();
 
  let result_type = input.parse::<Type>().ok();
 
- eprintln!("result_type = {:#?}", result_type);
+ // eprintln!("result_type = {:#?}", result_type);
 
  let pred: LitStr = input.parse()?;
 
- eprintln!("pred = {:#?}", pred.value());
+ // eprintln!("pred = {:#?}", pred.value());
 
  // See if we have any explicitly declared columns
  // Neline
@@ -309,7 +317,7 @@ fn do_parse_tokens(
  let explicit_members =
   if explicit_members.members.is_empty() { None } else { Some(explicit_members) };
 
- eprintln!("explicit_members = {:#?}", explicit_members);
+ // eprintln!("explicit_members = {:#?}", explicit_members);
 
  // If we have a result type and no explicit members, synthesize the members
 
@@ -329,14 +337,15 @@ fn do_parse_tokens(
 
    let column_names_str =
     table.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(", ");
-   eprintln!("synthesized members: {:#?}", column_names_str);
+   // eprintln!("synthesized members: {:#?}", column_names_str);
    format!("SELECT {} FROM {} {}", column_names_str, table_name, pred.value())
   }
   (Select, _, _) => format!("SELECT {}", pred.value()),
+  (SelectCTE, _, _) => pred.value(),
   (Execute, _, _) => pred.value(),
  };
 
- eprintln!("{:#?}", sql);
+ // eprintln!("{:#?}", sql);
 
  // // Prepare SQL
  // let sql = match statement_type {
@@ -384,6 +393,7 @@ fn do_parse_tokens(
    return Ok(tokens);
   }
   (Select, _, Some(m)) => (m.struct_members, m.row_casters),
+  (SelectCTE, _, Some(m)) => (m.struct_members, m.row_casters),
   (Execute, _, _) => {
    let tokens = quote! {
    {
@@ -399,11 +409,11 @@ fn do_parse_tokens(
     return Err(input.error("Expected parameters or ')'"));
    }
 
-   eprintln!("{}", tokens);
+   // eprintln!("{}", tokens);
 
    return Ok(tokens);
   }
-  _ => abort!(span, "Turbosql is feeling weird about life. Try again later."),
+  _ => abort!(span, "Expected explicitly typed return values or a return type."),
  };
 
  let (result_type, struct_decl, default) = match result_type {
@@ -445,7 +455,7 @@ fn do_parse_tokens(
   return Err(input.error("Expected parameters or ')'"));
  }
 
- eprintln!("{}", tokens);
+ // eprintln!("{}", tokens);
 
  Ok(tokens)
 }
@@ -459,6 +469,18 @@ impl Parse for SelectUncheckedTokens {
 impl Parse for SelectCheckedTokens {
  fn parse(input: ParseStream) -> syn::Result<Self> {
   Ok(SelectCheckedTokens { tokens: do_parse_tokens(input, Select, Checked)? })
+ }
+}
+
+impl Parse for SelectCTEUncheckedTokens {
+ fn parse(input: ParseStream) -> syn::Result<Self> {
+  Ok(SelectCTEUncheckedTokens { tokens: do_parse_tokens(input, SelectCTE, Unchecked)? })
+ }
+}
+
+impl Parse for SelectCTECheckedTokens {
+ fn parse(input: ParseStream) -> syn::Result<Self> {
+  Ok(SelectCTECheckedTokens { tokens: do_parse_tokens(input, SelectCTE, Checked)? })
  }
 }
 
@@ -632,6 +654,21 @@ pub fn select(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 #[proc_macro_error]
 pub fn select_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
  let SelectUncheckedTokens { tokens } = parse_macro_input!(input);
+ proc_macro::TokenStream::from(tokens)
+}
+
+/// Executes a SQL "WITH ... SELECT" (CTE) statement
+#[proc_macro]
+#[proc_macro_error]
+pub fn select_cte(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+ let SelectCTECheckedTokens { tokens } = parse_macro_input!(input);
+ proc_macro::TokenStream::from(tokens)
+}
+
+#[proc_macro]
+#[proc_macro_error]
+pub fn select_cte_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+ let SelectCTEUncheckedTokens { tokens } = parse_macro_input!(input);
  proc_macro::TokenStream::from(tokens)
 }
 
