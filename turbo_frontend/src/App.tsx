@@ -391,8 +391,21 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
     results.map((item: codegen.ResultItem) => (
      <div
       className="group flex cursor-pointer p-3 pt-2 hover:bg-indigo-100 rounded-lg"
-      onClick={() => {
-       if (item.url) window.open(item.url);
+      onClick={(e: SyntheticEvent) => {
+       console.log("outer");
+
+       if (item.url) {
+        const anchor = document.createElement("a");
+
+        Object.assign(anchor, {
+         target: "_blank",
+         href: item.url,
+         rel: "noopener noreferrer",
+        }).click();
+
+        // window.open(item.url);
+        e.stopPropagation();
+       }
       }}
      >
       <div className="flex-none w-12 h-24 mr-2">
@@ -473,23 +486,45 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
        />
       </div>
       <div>
-       <a
+       <div
         className="block pt-0.5 text-gray-600 group-hover:underline text-lg font-medium"
         dangerouslySetInnerHTML={{ __html: item.title ?? "" }}
-        rel="noopener noreferrer"
-        target="_blank"
+        // rel="noopener noreferrer"
+        // target="_blank"
         // onClick={async () => {
         //  const result = await fetch(
         //   `http://localhost:3030/monolith/${encodeURIComponent(item.url)}`
         //  );
         //  console.log(DOMPurify.sanitize(await result.text()));
         // }}
-        href={item.url ?? ""}
-       ></a>
-       <div
-        className="text-sm text-green-500"
-        dangerouslySetInnerHTML={{ __html: item.searchHighlightedUrl || item.url || "" }}
+        // href={item.url ?? ""}
        ></div>
+       <div>
+        <span
+         className="text-sm text-green-500"
+         dangerouslySetInnerHTML={{ __html: item.searchHighlightedUrl || item.url || "" }}
+        ></span>
+        <span
+         className="pl-4 text-sm text-gray-500 hover:text-gray-700 underline"
+         onClick={(e: SyntheticEvent) => {
+          console.log("inner");
+          if (item.url) {
+           const anchor = document.createElement("a");
+
+           Object.assign(anchor, {
+            target: "_blank",
+            href: `https://archive.vn/?run=1&url=${item.url}`,
+            rel: "noopener noreferrer",
+           }).click();
+
+           // window.open(`https://archive.vn/?run=1&url=${item.url}`);
+           e.stopPropagation();
+          }
+         }}
+        >
+         archive
+        </span>
+       </div>
        <div
         className="text-sm text-gray-500"
         dangerouslySetInnerHTML={{ __html: item.snippet ?? "" }}
