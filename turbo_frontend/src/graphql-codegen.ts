@@ -46,6 +46,8 @@ export type ResultItem = {
   sourceResultPos?: Maybe<Scalars['Int']>;
   lastScraped?: Maybe<Scalars['Float']>;
   bookmarked?: Maybe<Scalars['Boolean']>;
+  bookmarkTimestamp?: Maybe<Scalars['Float']>;
+  rank?: Maybe<Scalars['Float']>;
   hostaffection?: Maybe<Scalars['Int']>;
 };
 
@@ -95,7 +97,7 @@ export type GetBookmarksQuery = (
   { __typename?: 'Query' }
   & { getBookmarks: Array<(
     { __typename?: 'ResultItem' }
-    & Pick<ResultItem, 'url' | 'searchHighlightedUrl' | 'host' | 'title' | 'snippet' | 'sourceQuery' | 'sourceQueryUrl' | 'sourceResultPos' | 'lastScraped' | 'bookmarked' | 'hostaffection'>
+    & Pick<ResultItem, 'url' | 'searchHighlightedUrl' | 'host' | 'title' | 'snippet' | 'sourceQuery' | 'sourceQueryUrl' | 'sourceResultPos' | 'lastScraped' | 'bookmarked' | 'bookmarkTimestamp' | 'rank' | 'hostaffection'>
   )> }
 );
 
@@ -109,7 +111,7 @@ export type SearchQuery = (
   { __typename?: 'Query' }
   & { search: Array<(
     { __typename?: 'ResultItem' }
-    & Pick<ResultItem, 'url' | 'searchHighlightedUrl' | 'host' | 'title' | 'snippet' | 'sourceQuery' | 'sourceQueryUrl' | 'sourceResultPos' | 'lastScraped' | 'bookmarked' | 'hostaffection'>
+    & Pick<ResultItem, 'url' | 'searchHighlightedUrl' | 'host' | 'title' | 'snippet' | 'sourceQuery' | 'sourceQueryUrl' | 'sourceResultPos' | 'lastScraped' | 'bookmarked' | 'bookmarkTimestamp' | 'rank' | 'hostaffection'>
   )> }
 );
 
@@ -181,6 +183,8 @@ export const GetBookmarksDocument = gql`
     sourceResultPos
     lastScraped
     bookmarked
+    bookmarkTimestamp
+    rank
     hostaffection
   }
 }
@@ -223,6 +227,8 @@ export const SearchDocument = gql`
     sourceResultPos
     lastScraped
     bookmarked
+    bookmarkTimestamp
+    rank
     hostaffection
   }
 }

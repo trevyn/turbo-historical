@@ -11,6 +11,8 @@ query getBookmarks {
   sourceResultPos
   lastScraped
   bookmarked
+  bookmarkTimestamp
+  rank
   hostaffection
  }
 }
@@ -28,6 +30,8 @@ query search($query: String!, $forceScrape: Boolean!) {
   sourceResultPos
   lastScraped
   bookmarked
+  bookmarkTimestamp
+  rank
   hostaffection
  }
 }

@@ -48,6 +48,8 @@ type ResultItem {
   sourceResultPos: Int
   lastScraped: Float
   bookmarked: Boolean
+  bookmarkTimestamp: Float
+  rank: Float
   hostaffection: Int
 }
 
