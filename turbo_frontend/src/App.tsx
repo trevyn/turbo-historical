@@ -383,6 +383,8 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
  const [setHostAffectionMutation] = codegen.useSetHostAffectionMutation();
  const [setBookmarkedMutation] = codegen.useSetBookmarkedMutation();
 
+ // console.log(results);
+
  return (
   <>
    {results &&
@@ -492,6 +494,7 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
         className="text-sm text-gray-500"
         dangerouslySetInnerHTML={{ __html: item.snippet ?? "" }}
        ></div>
+       <div className="text-sm text-gray-300">Rank {item.rank?.toFixed(2)}</div>
       </div>
      </div>
     ))}
