@@ -154,6 +154,10 @@ struct ResultItem {
  #[turbosql(skip)]
  bookmarked: Option<bool>,
  #[turbosql(skip)]
+ bookmark_timestamp: Option<f64>,
+ #[turbosql(skip)]
+ rank: Option<f64>,
+ #[turbosql(skip)]
  hostaffection: Option<i32>,
 }
 
@@ -206,18 +210,30 @@ struct Query;
 impl Query {
  async fn get_bookmarks() -> FieldResult<Vec<ResultItem>> {
   Ok(select!(ResultItem r#"
- DISTINCT
- bookmark.url as url_String,
- resultitem.title as title_String,
- resultitem.host as host_String,
- resultitem.snippet as snippet_String,
- true as bookmarked_bool,
- hostaffection.affection as hostaffection_i32
- FROM bookmark
- LEFT JOIN resultitem ON resultitem.url = bookmark.url
- LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
- ORDER BY bookmark.timestamp DESC
- "#)?)
+   url_String,
+   title_String,
+   host_String,
+   snippet_String,
+   bookmarked_bool,
+   hostaffection_i32,
+   bookmark_timestamp_f64
+   FROM (
+    SELECT
+    bookmark.url as url_String,
+    resultitem.title as title_String,
+    resultitem.host as host_String,
+    resultitem.snippet as snippet_String,
+    true as bookmarked_bool,
+    hostaffection.affection as hostaffection_i32,
+    bookmark.timestamp as bookmark_timestamp_f64
+    FROM bookmark
+    LEFT JOIN resultitem ON resultitem.url = bookmark.url
+    LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
+    ORDER BY bookmark_timestamp_f64 DESC, resultitem.last_scraped DESC
+   )
+   GROUP BY url_String
+   ORDER BY bookmark_timestamp_f64 DESC
+  "#)?)
  }
 
  async fn search(query: String, force_scrape: bool) -> FieldResult<Vec<ResultItem>> {
@@ -296,23 +312,36 @@ async fn instant_search(query: String) -> FieldResult<Vec<ResultItem>> {
  let match_query = convert_query_for_fts5(query.clone());
  // let query = convert_query_for_fts5(query.clone()).split(" ").collect::<Vec<_>>().join(" OR ");
 
- log::info!("{}", query);
+ log::info!("match_query = {:?}", match_query);
 
  Ok(select_unchecked!(ResultItem r#"
- DISTINCT
- highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
- highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
- highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
- resultitem2.url AS url_String,
- resultitem2.host AS host_String,
- bookmark.url IS NOT NULL AS bookmarked_bool,
- IFNULL(hostaffection.affection, 0) AS hostaffection_i32
- FROM resultitem2
- LEFT JOIN bookmark ON resultitem2.url = bookmark.url
- LEFT JOIN hostaffection ON resultitem2.host = hostaffection.host
- WHERE resultitem2 match ?
- ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, rank
- LIMIT 30
+  search_highlighted_url_String,
+  title_String,
+  snippet_String,
+  url_String,
+  host_String,
+  bookmark.url IS NOT NULL AS bookmarked_bool,
+  IFNULL(hostaffection.affection, 0) AS hostaffection_i32,
+  min(rank) as rank_f64
+  
+  FROM (
+   SELECT
+    highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
+    highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
+    highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
+    resultitem2.url AS url_String,
+    resultitem2.host AS host_String,
+    rank
+    FROM resultitem2
+    WHERE resultitem2 MATCH ?
+    LIMIT -1 OFFSET 0  -- prevents "unable to use function highlight in the requested context"
+  )
+
+  LEFT JOIN bookmark ON url_String = bookmark.url
+  LEFT JOIN hostaffection ON host_String = hostaffection.host
+  GROUP BY url_String
+  ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, rank_f64
+  LIMIT 30
  "#, match_query)?)
 }
 
@@ -355,32 +384,36 @@ async fn scrape_search(query: String) -> FieldResult<Vec<ResultItem>> {
  let match_query =
   convert_query_for_fts5(query.clone()).split(" ").collect::<Vec<_>>().join(" OR ");
 
- log::info!("{:?}", match_query);
+ log::info!("match_query = {:?}", match_query);
 
  Ok(select_unchecked!(ResultItem r#"
- DISTINCT
- highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
- highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
- highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
- resultitem.url AS url_String,
- resultitem.host AS host_String,
- bookmark.url IS NOT NULL AS bookmarked_bool,
- IFNULL(hostaffection.affection, 0) AS hostaffection_i32
- FROM resultitem, resultitem2(?)
- LEFT JOIN bookmark ON resultitem.url = bookmark.url
- LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
- WHERE resultitem.source_query = ? AND resultitem.url = resultitem2.url
- ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, source_result_pos
- LIMIT 30
+  search_highlighted_url_String,
+  title_String,
+  snippet_String,
+  url_String,
+  host_String,
+  bookmark.url IS NOT NULL AS bookmarked_bool,
+  IFNULL(hostaffection.affection, 0) AS hostaffection_i32,
+  min(source_result_pos) as rank_f64
+
+  FROM (
+   SELECT highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
+   highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
+   highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
+   resultitem.url AS url_String,
+   resultitem.host AS host_String,
+   source_result_pos
+   FROM resultitem, resultitem2(?)
+   WHERE resultitem.source_query = ? AND resultitem.url = resultitem2.url
+   LIMIT -1 OFFSET 0  -- prevents "unable to use function highlight in the requested context"
+  )
+
+  LEFT JOIN bookmark ON url_String = bookmark.url
+  LEFT JOIN hostaffection ON host_String = hostaffection.host
+  GROUP BY url_String
+  ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, rank_f64
+  LIMIT 30
  "#,  match_query, query)?)
- // results
-}
-
-fn filter_duplicate_urls(results: Vec<ResultItem>) -> Vec<ResultItem> {
- // filter map, push url to list, if already in list, filter
- // note that, done in order, this will pick the example with the highest rank and thus likely best snippet!
-
- vec![]
 }
 
 struct Mutations;
