@@ -391,29 +391,28 @@ async fn scrape_search(query: String) -> FieldResult<Vec<ResultItem>> {
   title_String,
   snippet_String,
   url_String,
-  host_String,
+  resultitem.host AS host_String,
   bookmark.url IS NOT NULL AS bookmarked_bool,
   IFNULL(hostaffection.affection, 0) AS hostaffection_i32,
-  min(source_result_pos) as rank_f64
+  min(resultitem.source_result_pos) as rank_f64
 
   FROM (
    SELECT highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
    highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
    highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
-   resultitem.url AS url_String,
-   resultitem.host AS host_String,
-   source_result_pos
-   FROM resultitem, resultitem2(?)
-   WHERE resultitem.source_query = ? AND resultitem.url = resultitem2.url
+   url AS url_String
+   FROM resultitem2(?)
+   WHERE resultitem2.url in (SELECT DISTINCT url FROM resultitem WHERE source_query = ?)
    LIMIT -1 OFFSET 0  -- prevents "unable to use function highlight in the requested context"
   )
 
+  LEFT JOIN resultitem ON resultitem.url = url_String AND resultitem.source_query = ?
   LEFT JOIN bookmark ON url_String = bookmark.url
-  LEFT JOIN hostaffection ON host_String = hostaffection.host
+  LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
   GROUP BY url_String
   ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, rank_f64
   LIMIT 30
- "#,  match_query, query)?)
+ "#,  match_query, query, query)?)
 }
 
 struct Mutations;
