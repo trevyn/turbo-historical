@@ -1,7 +1,7 @@
 import React, { useState, useEffect, FC, FormEvent, SyntheticEvent } from "react";
 import { $enum } from "ts-enum-util";
 import { Icons } from "./icons";
-import useSWR, { cache as swrCache } from "swr";
+// import useSWR, { cache as swrCache } from "swr";
 import prettyBytes from "pretty-bytes";
 import { DateTime } from "luxon";
 // import { dequal } from "dequal";
@@ -93,7 +93,7 @@ const navItemsEnum = Object.entries(Object.keys(navItems)).reduce(
  {}
 );
 
-let JUST_FETCHED_KEY: string | null = null;
+// let JUST_FETCHED_KEY: string | null = null;
 
 // $enum(navItemsEnum).forEach((value, key, wrappedEnum, index) => {
 //  console.log("foo", value, key, wrappedEnum, index);
@@ -544,25 +544,27 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
 //  Settings = "Settings",
 // }
 
-const fetcher = async (url: any) => fetch(url).then(r => r.json());
+// const fetcher = async (url: any) => fetch(url).then(r => r.json());
 
 const FilesComponent: FC = () => {
  let { pathname } = useLocation();
  let path = pathname.slice("/files/".length);
- let key = "http://localhost:3020/listjson/" + path.split("/").map(encodeURI).join("/");
- let cached = swrCache.get(key);
+ // let key = "http://localhost:3020/listjson/" + path.split("/").map(encodeURI).join("/");
+ // let cached = swrCache.get(key);
 
- const { data, error } = useSWR(
-  "http://localhost:3020/listjson/" + path,
-  JUST_FETCHED_KEY === key && cached
-   ? () => {
-      JUST_FETCHED_KEY = null;
-      return cached;
-     }
-   : fetcher
- );
+ // const { data, error } = useSWR(
+ //  "http://localhost:3020/listjson/" + path,
+ //  JUST_FETCHED_KEY === key && cached
+ //   ? () => {
+ //      JUST_FETCHED_KEY = null;
+ //      return cached;
+ //     }
+ //   : fetcher
+ // );
 
- if (error) return <div>failed to load</div>;
+ let data: any[] = [];
+
+ // if (error) return <div>failed to load</div>;
  if (!data) return <div>loading...</div>;
 
  let patharray = path.split("/");
@@ -690,14 +692,14 @@ const FileEntry2: FC<any> = ({ item }: any) => {
      className="px-6 py-4 whitespace-no-wrap flex items-center"
      onClick={async () => {
       console.log("item.Path: " + item.Path);
-      let key = "http://localhost:3020/listjson/" + item.Path.split("/").map(encodeURI).join("/");
+      // let key = "http://localhost:3020/listjson/" + item.Path.split("/").map(encodeURI).join("/");
 
-      if (!swrCache.get(key)) {
-       console.log("fetching key: http://localhost:3020/listjson/" + item.Path);
-       let json = await (await fetch("http://localhost:3020/listjson/" + item.Path)).json();
-       swrCache.set(key, json);
-       JUST_FETCHED_KEY = key;
-      }
+      // if (!swrCache.get(key)) {
+      //  console.log("fetching key: http://localhost:3020/listjson/" + item.Path);
+      //  let json = await (await fetch("http://localhost:3020/listjson/" + item.Path)).json();
+      //  swrCache.set(key, json);
+      //  JUST_FETCHED_KEY = key;
+      // }
 
       navigate("/files/" + item.Path);
      }}
