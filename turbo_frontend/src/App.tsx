@@ -10,7 +10,7 @@ import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import * as codegen from "./graphql-codegen";
 
 const apollo = new ApolloClient({
- uri: "http://localhost:3020/graphql",
+ uri: `${window.location.protocol}//${window.location.hostname}:3020/graphql`,
  cache: new InMemoryCache(),
 });
 
