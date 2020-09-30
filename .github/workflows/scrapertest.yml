@@ -79,7 +79,7 @@ jobs:
         with:
           tag_name: ${{ steps.vars.outputs.sha }}
           draft: false
-          prerelease: true
+          prerelease: false
 
       - uses: actions/upload-release-asset@v1
         env:
