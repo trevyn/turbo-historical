@@ -131,10 +131,16 @@ static LAST_SCRAPE: Lazy<Mutex<SystemTime>> = Lazy::new(|| Mutex::new(SystemTime
 struct Opts {
  #[clap(short, long)]
  cert_path: Option<String>,
+
  #[clap(short, long)]
  key_path: Option<String>,
+
  #[clap(short, long, default_value = "3020")]
  port: u16,
+
+ /// GraphQL "Authentication: Bearer" password
+ #[clap(long)]
+ password: String,
 }
 
 #[derive(GraphQLObject, Turbosql, Clone, Debug, Default)]
@@ -472,6 +478,9 @@ async fn main() {
  Bookmark::select_all();
  ResultItem::select_all();
 
+ let opts = Opts::parse();
+ let authorization = Box::leak(format!("Bearer {}", opts.password).into_boxed_str());
+
  let config = CString::new("").unwrap(); // rclone.conf
  unsafe {
   GoSetConfig(config.as_ptr());
@@ -505,27 +514,27 @@ async fn main() {
   .allow_headers(vec![header::CONTENT_TYPE, header::AUTHORIZATION])
   .allow_any_origin();
 
- let api = warp::path("listjson")
-  .and(warp::filters::path::full())
-  .and(with_sender(listjson_tx))
-  .and_then(listjson_handler)
-  //
-  .or(warp::get().and(warp::path("files").and(warp::path::full()).and_then(files_handler)))
-  //
-  .or(warp::path!("monolith" / String).and_then(monolith_handler))
+ let api = warp::path("graphql")
+  .and(warp::header::exact("authorization", authorization))
+  .and(juniper_warp::make_graphql_filter(
+   Schema::new(Query, Mutations, EmptySubscription::new()),
+   warp::any().map(move || ()).boxed(),
+  ))
   //
   .or(warp::get().and(warp::path("graphiql")).and(juniper_warp::graphiql_filter("/graphql", None)))
   .or(
    warp::get().and(warp::path("playground")).and(juniper_warp::playground_filter("/graphql", None)),
   )
+  // warp::path("listjson")
+  // .and(warp::filters::path::full())
+  // .and(with_sender(listjson_tx))
+  // .and_then(listjson_handler)
   //
-  .or(warp::path("graphql").and(juniper_warp::make_graphql_filter(
-   Schema::new(Query, Mutations, EmptySubscription::new()),
-   warp::any().map(move || ()).boxed(),
-  )))
+  // .or(warp::get().and(warp::path("files").and(warp::path::full()).and_then(files_handler)))
+  //
+  // .or(warp::path!("monolith" / String).and_then(monolith_handler))
   //
   .or(warp::path("static").and(warp::path::full()).map(|path: warp::path::FullPath| {
-   // path.as_str().to_string()
    match (|| -> anyhow::Result<_> {
     Ok(warp::reply::with_header(
      std::str::from_utf8(
@@ -538,27 +547,19 @@ async fn main() {
     ))
    })() {
     Ok(body) => body,
-    Err(e) => panic!("panic!"), //warp::reply::html("error!".to_string()),
+    Err(_e) => panic!("panic!"), //warp::reply::html("error!".to_string()),
    }
   }))
-  // }))
   //
   .or(warp::any().map(|| {
-   match (|| -> anyhow::Result<_> {
-    Ok(warp::reply::html(
-     std::str::from_utf8(Asset::get("index.html").context("None")?.as_ref()).unwrap().to_string(),
-    ))
-   })() {
-    Ok(body) => body,
-    Err(e) => warp::reply::html("error!".to_string()),
-   }
+   Ok(warp::reply::html(
+    std::str::from_utf8(Asset::get("index.html").unwrap().as_ref()).unwrap().to_string(),
+   ))
   }))
   //
   .with(cors)
   //
   .with(warplog);
-
- let opts = Opts::parse();
 
  match (opts.key_path, opts.cert_path) {
   (Some(key_path), Some(cert_path)) => {
