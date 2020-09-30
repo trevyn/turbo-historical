@@ -215,6 +215,16 @@ function App() {
        {/* {Object.values(navItems).map((item: NavItem) => (
         <Route path={item.path} element={<div>I AM THE {item.title} PAGE</div>} />
        ))} */}
+
+       <Route
+        path="/setpassword/*"
+        element={
+         <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
+          <SetPasswordComponent />
+         </nav>
+        }
+       />
+
        {$enum(navItemsEnum)
         .getKeys()
         .map((item: NavItemTypes) =>
@@ -300,6 +310,14 @@ const BookmarksComponent: FC = () => {
 const ActivityMonitorComponent: FC = () => {
  const { data } = codegen.useGetActivityMonitorQuery();
  return <div>{data && data.getActivityMonitor && JSON.stringify(data.getActivityMonitor)}</div>;
+};
+
+const SetPasswordComponent: FC = () => {
+ let { pathname } = useLocation();
+ let password = pathname.slice("/setpassword/".length);
+ localStorage.setItem("authorization", `Bearer ${password}`);
+
+ return <>Password set! Reload page pls.</>;
 };
 
 const SearchComponent: FC = () => {
