@@ -9,8 +9,11 @@ import { Routes, Route, Link, useMatch, useLocation, useNavigate } from "react-r
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import * as codegen from "./graphql-codegen";
 
+// if we're at port 3000, assume local dev server, and redirect graphql to port 3020
+const port = window.location.port === "3000" ? "3020" : window.location.port;
+
 const apollo = new ApolloClient({
- uri: `${window.location.protocol}//${window.location.hostname}:3020/graphql`,
+ uri: `${window.location.protocol}//${window.location.hostname}:${port}/graphql`,
  cache: new InMemoryCache(),
  headers: {
   authorization: localStorage.getItem("authorization") || "",
