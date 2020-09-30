@@ -65,17 +65,16 @@ jobs:
         with:
           name: ubuntu-18.04
 
-      - run: ls
-
-      - run: ls ./ubuntu-18.04
+      - id: vars
+        run: echo "::set-output name=sha::$(echo ${GITHUB_SHA})"
 
       - id: create_release
         uses: actions/create-release@v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${GITHUB_SHA}
-          release_name: ${GITHUB_SHA}
+          tag_name: ${{ steps.vars.outputs.sha }}
+          release_name: ${{ steps.vars.outputs.sha }}
           draft: false
           prerelease: true
 
@@ -84,6 +83,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ubuntu-18.04/scrapertest.zip
-          asset_name: scrapertest-linux-${GITHUB_SHA}.zip
+          asset_path: ./ubuntu-18.04/scrapertest
+          asset_name: scrapertest-linux-${{ steps.vars.outputs.sha }}
           asset_content_type: application/octet-stream
