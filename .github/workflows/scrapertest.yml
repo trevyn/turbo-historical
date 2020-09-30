@@ -70,8 +70,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.sha }}
-          release_name: Release ${{ github.sha }}
+          tag_name: release-${{ github.sha }}
+          release_name: release-${{ github.sha }}
           draft: false
           prerelease: true
 
