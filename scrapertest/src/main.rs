@@ -551,6 +551,14 @@ async fn main() {
    }
   }))
   //
+  .or(warp::path("favicon.ico").map(|| {
+   Ok(
+    warp::http::Response::builder()
+     .header("content-type", "image/x-icon")
+     .body(Asset::get("favicon.ico").unwrap()),
+   )
+  }))
+  //
   .or(warp::any().map(|| {
    Ok(warp::reply::html(
     std::str::from_utf8(Asset::get("index.html").unwrap().as_ref()).unwrap().to_string(),
