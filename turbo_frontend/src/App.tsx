@@ -12,6 +12,9 @@ import * as codegen from "./graphql-codegen";
 const apollo = new ApolloClient({
  uri: `${window.location.protocol}//${window.location.hostname}:3020/graphql`,
  cache: new InMemoryCache(),
+ headers: {
+  authorization: localStorage.getItem("authorization") || "",
+ },
 });
 
 const ConstructionComponent: FC = () => {
