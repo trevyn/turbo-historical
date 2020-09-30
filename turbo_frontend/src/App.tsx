@@ -608,6 +608,13 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
 const FilesComponent: FC = () => {
  let { pathname } = useLocation();
  let path = pathname.slice("/files/".length);
+
+ const { data, loading, error } = codegen.useGetRcloneItemsQuery({
+  variables: {
+   path,
+  },
+ });
+
  // let key = "http://localhost:3020/listjson/" + path.split("/").map(encodeURI).join("/");
  // let cached = swrCache.get(key);
 
@@ -621,10 +628,8 @@ const FilesComponent: FC = () => {
  //   : fetcher
  // );
 
- let data: any[] = [];
-
- // if (error) return <div>failed to load</div>;
- if (!data) return <div>loading...</div>;
+ if (error) return <div>failed to load</div>;
+ if (!data || !data.getRcloneItems) return <div>loading...</div>;
 
  let patharray = path.split("/");
 
@@ -725,7 +730,7 @@ const FilesComponent: FC = () => {
       <div className="shadow overflow-hidden border-b border-t border-gray-200 sm:rounded-lg">
        <table className=" divide-y divide-gray-200">
         <tbody className="bg-white divide-y divide-gray-200">
-         {data.map((item: any) => (
+         {data.getRcloneItems.map((item: codegen.RcloneItem) => (
           <FileEntry2 item={item} />
          ))}
         </tbody>
@@ -740,7 +745,7 @@ const FilesComponent: FC = () => {
  );
 };
 
-const FileEntry2: FC<any> = ({ item }: any) => {
+const FileEntry2: FC<{ item: codegen.RcloneItem }> = ({ item }) => {
  let navigate = useNavigate();
 
  return (
@@ -750,7 +755,7 @@ const FileEntry2: FC<any> = ({ item }: any) => {
     <div
      className="px-6 py-4 whitespace-no-wrap flex items-center"
      onClick={async () => {
-      console.log("item.Path: " + item.Path);
+      console.log("item.Path: " + item.path);
       // let key = "http://localhost:3020/listjson/" + item.Path.split("/").map(encodeURI).join("/");
 
       // if (!swrCache.get(key)) {
@@ -760,7 +765,7 @@ const FileEntry2: FC<any> = ({ item }: any) => {
       //  JUST_FETCHED_KEY = key;
       // }
 
-      navigate("/files/" + item.Path);
+      navigate("/files/" + item.path + "/");
      }}
     >
      <div className="flex-shrink-0 h-10 w-10">
@@ -771,12 +776,13 @@ const FileEntry2: FC<any> = ({ item }: any) => {
       />
      </div>
      <div className="ml-4">
-      <div className="text-sm leading-5 font-medium text-gray-700">{item.Name}</div>
+      <div className="text-sm leading-5 font-medium text-gray-700">{item.name}</div>
       <div className="text-sm leading-5 text-gray-400 font-thin">
-       {item.Size >= 0 && `${prettyBytes(item.Size)}, `}
-       {`${DateTime.fromISO(item.ModTime).toRelative()} (${DateTime.fromISO(item.ModTime).toFormat(
-        "MMM d, yyyy"
-       )})`}
+       {parseInt(item.size) >= 0 && `${prettyBytes(parseInt(item.size))}, `}
+       {item.modTime &&
+        `${DateTime.fromISO(item.modTime).toRelative()} (${DateTime.fromISO(item.modTime).toFormat(
+         "MMM d, yyyy"
+        )})`}
       </div>
      </div>
     </div>
