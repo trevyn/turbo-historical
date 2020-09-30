@@ -119,7 +119,7 @@ function App() {
  return (
   <ApolloProvider client={apollo}>
    <div className="h-screen flex bg-white">
-    <div className="hidden fixed h-screen md:flex md:flex-shrink-0">
+    <div className="fixed h-screen flex flex-shrink-0">
      <div className="flex flex-col w-64 border-r border-gray-200 pb-4 bg-gray-100">
       {/* Sidebar component */}
       <div className="h-0 flex-1 flex flex-col overflow-y-auto">
@@ -135,7 +135,7 @@ function App() {
          <input
           id="search"
           autoComplete="off"
-          className="form-input block w-full pl-9 sm:text-sm sm:leading-5 focus:border-indigo-300 focus:shadow-outline-indigo"
+          className="form-input block w-full pl-9 text-sm leading-5 focus:border-indigo-300 focus:shadow-outline-indigo"
           placeholder={'Search (Press "/" to focus)'}
          />
         </div>
@@ -223,7 +223,7 @@ function App() {
            <Route
             path={navItems[item].matchpath}
             element={
-             <nav className="pl-5 p-8 pb-10 mt-px hidden sm:flex items-center text-sm leading-5 font-medium">
+             <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
               <ActivityMonitorComponent />
              </nav>
             }
@@ -234,7 +234,7 @@ function App() {
            <Route
             path={navItems[item].matchpath}
             element={
-             <nav className="pl-5 p-8 pb-10 mt-px hidden sm:flex items-center text-sm leading-5 font-medium">
+             <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
               <span className="cursor-default text-gray-500">
                <ConstructionComponent />
               </span>
@@ -248,7 +248,7 @@ function App() {
             path={navItems[item].matchpath}
             element={
              <>
-              <nav className="pl-5 p-8 pb-10 mt-px hidden sm:flex items-center text-sm leading-5 font-medium">
+              <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
                <span className="cursor-default text-gray-500">{navItems[item].title}</span>
               </nav>
               <BookmarksComponent />
@@ -366,7 +366,7 @@ const SearchComponent: FC = () => {
         setValue(e.target.value);
         getSearch({ variables: { query: e.target.value, forceScrape: false } });
        }}
-       className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-indigo-300 focus:shadow-outline-indigo sm:text-sm transition duration-150 ease-in-out"
+       className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-indigo-300 focus:shadow-outline-indigo text-sm transition duration-150 ease-in-out"
        placeholder="Search"
        type="search"
       />
@@ -652,7 +652,7 @@ const FilesComponent: FC = () => {
       Back
      </a>
     </nav> */}
-    <nav className="pl-5 p-8 pb-10 mt-px hidden sm:flex items-center text-sm leading-5 font-medium">
+    <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
      <span className="cursor-pointer text-gray-500 hover:text-gray-700 hover:underline transition duration-150 ease-in-out">
       Files
      </span>
