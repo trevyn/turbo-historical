@@ -609,7 +609,7 @@ const FilesComponent: FC = () => {
  let { pathname } = useLocation();
  let path = pathname.slice("/files/".length);
 
- const { data, loading, error } = codegen.useGetRcloneItemsQuery({
+ const { data, error } = codegen.useGetRcloneItemsQuery({
   variables: {
    path,
   },
