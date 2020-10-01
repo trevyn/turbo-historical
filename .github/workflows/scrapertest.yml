@@ -76,7 +76,7 @@ jobs:
       - id: vars
         run: echo "::set-output name=sha::$(echo $(date '+%y%m%d-%H%M')-${GITHUB_SHA:0:7})"
 
-      - uses: Bullrich/generate-release-changelog@2.0.0
+      - uses: trevyn/generate-release-changelog@master
         id: changelog
         env:
           REPO: ${{ github.repository }}
