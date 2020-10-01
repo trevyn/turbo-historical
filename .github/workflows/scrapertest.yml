@@ -61,6 +61,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v2
 
       - run: brotli -v scrapertest
@@ -72,12 +76,18 @@ jobs:
       - id: vars
         run: echo "::set-output name=sha::$(echo $(date '+%y%m%d-%H%M')-${GITHUB_SHA:0:7})"
 
+      - uses: Bullrich/generate-release-changelog@2.0.0
+        id: changelog
+        env:
+          REPO: ${{ github.repository }}
+
       - id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.vars.outputs.sha }}
+          body: ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
 
