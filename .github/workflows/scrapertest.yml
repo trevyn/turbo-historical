@@ -61,6 +61,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v2
 
       - run: brotli -v scrapertest
@@ -68,10 +72,6 @@ jobs:
 
       - run: brotli -v scrapertest
         working-directory: 'macos-10.15'
-
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - id: vars
         run: echo "::set-output name=sha::$(echo $(date '+%y%m%d-%H%M')-${GITHUB_SHA:0:7})"
