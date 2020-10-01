@@ -1,7 +1,11 @@
 import pkg from "@graphql-codegen/cli";
 const { generate } = pkg;
 
-let schema = "http://localhost:3020/graphql";
+let schema = {
+ "http://localhost:3020/graphql": {
+  headers: { Authorization: "Bearer foo" },
+ },
+};
 
 async function run() {
  console.log("generating graphql.schema.json...");
@@ -50,6 +54,7 @@ async function run() {
       withHOC: false,
       withComponent: false,
       apolloReactHooksImportFrom: "@apollo/client",
+      scalars: { i53: "number" },
      },
     },
    },

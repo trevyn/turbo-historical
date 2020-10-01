@@ -10,8 +10,8 @@ export type Scalars = {
   Boolean: boolean;
   Int: number;
   Float: number;
-  /** i53 */
-  i53: any;
+  /** i53: 53-bit signed integer; represented as `i53`/`i64` in Rust, `Float` in GraphQL, `number` in TypeScript. */
+  i53: number;
 };
 
 export type RcloneItem = {

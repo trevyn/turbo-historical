@@ -664,7 +664,7 @@
       {
         "kind": "SCALAR",
         "name": "i53",
-        "description": "i53",
+        "description": "i53: 53-bit signed integer; represented as `i53`/`i64` in Rust, `Float` in GraphQL, `number` in TypeScript.",
         "fields": null,
         "inputFields": null,
         "interfaces": null,

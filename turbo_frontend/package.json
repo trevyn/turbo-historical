@@ -43,7 +43,7 @@
  "scripts": {
   "start": "react-scripts start",
   "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
-  "graphql-codegen": "node run-codegen.mjs && npx get-graphql-schema http://localhost:3020/graphql > ./graphql.schema",
+  "graphql-codegen": "node run-codegen.mjs && npx get-graphql-schema http://localhost:3020/graphql -h Authorization=\"Bearer foo\" > ./graphql.schema",
   "build": "react-scripts build && echo '/* /index.html  200' | cat > build/_redirects",
   "reinstall-deps": "rm -rf node_modules && rm -rf package-lock.json && npm install",
   "build:tailwind": "npx tailwindcss build src/tailwind.css -o src/tailwind.output.css",

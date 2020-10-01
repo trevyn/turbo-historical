@@ -21,14 +21,17 @@ impl std::fmt::Display for i53 {
 #[allow(non_camel_case_types)]
 pub struct i53(ux_i53);
 
-#[juniper::graphql_scalar(description = "i53")]
+#[juniper::graphql_scalar(
+ description = "i53: 53-bit signed integer; represented as `i53`/`i64` in Rust, `Float` in GraphQL, `number` in TypeScript."
+)]
 impl<S> GraphQLScalar for i53
 where
  S: ScalarValue,
 {
  // Define how to convert your custom scalar into a primitive type.
  fn resolve(&self) -> Value {
-  Value::scalar(self.to_string())
+  let val: i64 = self.0.into();
+  Value::scalar(val as f64)
  }
 
  // Define how to parse a primitive type into your custom scalar.
