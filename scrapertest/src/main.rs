@@ -273,7 +273,7 @@ impl Query {
  async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItem>> {
   let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
   let items: Vec<RcloneItem> = serde_json::from_str(&contents)?;
-  let path = urldecode::decode(path);
+  let path = urlencoding::decode(&path).unwrap();
 
   Ok(
    items
@@ -662,97 +662,97 @@ async fn files_handler(param: warp::path::FullPath) -> Result<impl warp::Reply, 
  Ok("hi")
 }
 
-async fn monolith_handler(param: String) -> Result<impl warp::Reply, warp::Rejection> {
- let page = reqwest::get(&urldecode::decode(param.clone())).await.unwrap().text().await.unwrap();
+// async fn monolith_handler(param: String) -> Result<impl warp::Reply, warp::Rejection> {
+//  let page = reqwest::get(&urldecode::decode(param.clone())).await.unwrap().text().await.unwrap();
 
- log::info!("page is {} bytes", page.len());
- // fs::write("/Users/eden/Desktop/pre.html", &page).unwrap();
+//  log::info!("page is {} bytes", page.len());
+// fs::write("/Users/eden/Desktop/pre.html", &page).unwrap();
 
- // let result = ammonia::clean(&page);
+// let result = ammonia::clean(&page);
 
- // let tags = ["link", "svg", "g", "rect", "polygon", "style"].iter();
- // let tag_attributes = hashmap![
- //   "link" => hashset!["href", "rel", "type", "as", "media"],
- //   "img" => hashset!["src"],
- //   "svg" => hashset!["width", "height", "viewBox", "version", "xmlns", "xmlns:xlink"],
- //   "g" => hashset!["stroke", "stroke-width", "fill", "fill-rule"],
- //   "rect" => hashset!["fill"],
- //   "div" => hashset!["id"]
- // ];
+// let tags = ["link", "svg", "g", "rect", "polygon", "style"].iter();
+// let tag_attributes = hashmap![
+//   "link" => hashset!["href", "rel", "type", "as", "media"],
+//   "img" => hashset!["src"],
+//   "svg" => hashset!["width", "height", "viewBox", "version", "xmlns", "xmlns:xlink"],
+//   "g" => hashset!["stroke", "stroke-width", "fill", "fill-rule"],
+//   "rect" => hashset!["fill"],
+//   "div" => hashset!["id"]
+// ];
 
- // let result = ammonia::Builder::default()
- //  .add_tags(hashset!["link", "svg", "g", "rect", "polygon", "style", "wix-image", "path"])
- //  .clean_content_tags(hashset!["script"])
- //  .add_generic_attributes(hashset!["class", "style", "id"])
- //  .add_tag_attributes("link", &["href", "rel", "type", "as", "media"])
- //  .add_tag_attributes("svg", &["width", "height", "viewBox", "version", "xmlns", "xmlns:xlink"])
- //  .add_tag_attributes("g", &["stroke", "stroke-width", "fill", "fill-rule"])
- //  .add_tag_attributes("rect", &["fill", "x", "y", "width", "height", "rx"])
- //  .add_tag_attributes("path", &["d"])
- //  .url_relative(ammonia::UrlRelative::RewriteWithBase(
- //   ammonia::Url::parse(&urldecode::decode(param)).unwrap(),
- //  ))
- //  .clean(&page)
- //  .to_string();
+// let result = ammonia::Builder::default()
+//  .add_tags(hashset!["link", "svg", "g", "rect", "polygon", "style", "wix-image", "path"])
+//  .clean_content_tags(hashset!["script"])
+//  .add_generic_attributes(hashset!["class", "style", "id"])
+//  .add_tag_attributes("link", &["href", "rel", "type", "as", "media"])
+//  .add_tag_attributes("svg", &["width", "height", "viewBox", "version", "xmlns", "xmlns:xlink"])
+//  .add_tag_attributes("g", &["stroke", "stroke-width", "fill", "fill-rule"])
+//  .add_tag_attributes("rect", &["fill", "x", "y", "width", "height", "rx"])
+//  .add_tag_attributes("path", &["d"])
+//  .url_relative(ammonia::UrlRelative::RewriteWithBase(
+//   ammonia::Url::parse(&urldecode::decode(param)).unwrap(),
+//  ))
+//  .clean(&page)
+//  .to_string();
 
- // let dom = html5ever::parse_document(html5ever::rcdom::RcDom::default(), Default::default())
- //  .from_utf8()
- //  .read_from(&mut page.as_bytes())
- //  .unwrap();
+// let dom = html5ever::parse_document(html5ever::rcdom::RcDom::default(), Default::default())
+//  .from_utf8()
+//  .read_from(&mut page.as_bytes())
+//  .unwrap();
 
- // println!("{:#?}", dom);
+// println!("{:#?}", dom);
 
- // let mut buf: Vec<u8> = Vec::new();
- // html5ever::serialize::serialize(
- //  &mut buf,
- //  &dom.document,
- //  html5ever::serialize::SerializeOpts::default(),
- // )
- // .expect("unable to serialize DOM into buffer");
+// let mut buf: Vec<u8> = Vec::new();
+// html5ever::serialize::serialize(
+//  &mut buf,
+//  &dom.document,
+//  html5ever::serialize::SerializeOpts::default(),
+// )
+// .expect("unable to serialize DOM into buffer");
 
- // let result = String::from_utf8(buf).unwrap();
+// let result = String::from_utf8(buf).unwrap();
 
- // html5ever::serialize
- // let page = tokio::task::spawn_blocking(|| {
- //  monolith_wrapper::get_page(monolith_wrapper::Options {
- //   target: urldecode::decode(param),
- //   no_css: false,
- //   no_fonts: true,
- //   no_frames: true,
- //   no_images: false,
- //   no_js: true,
- //   insecure: false,
- //   isolate: false,
- //   output: "google.html".to_owned(),
- //   silent: false,
- //   timeout: 60,
- //   user_agent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0"
- //    .to_owned(),
- //   no_metadata: true,
- //  })
- //  .unwrap()
- // })
- // .await
- // .unwrap();
- // fs::write("/Users/eden/Desktop/post.html", &result).unwrap();
+// html5ever::serialize
+// let page = tokio::task::spawn_blocking(|| {
+//  monolith_wrapper::get_page(monolith_wrapper::Options {
+//   target: urldecode::decode(param),
+//   no_css: false,
+//   no_fonts: true,
+//   no_frames: true,
+//   no_images: false,
+//   no_js: true,
+//   insecure: false,
+//   isolate: false,
+//   output: "google.html".to_owned(),
+//   silent: false,
+//   timeout: 60,
+//   user_agent: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0"
+//    .to_owned(),
+//   no_metadata: true,
+//  })
+//  .unwrap()
+// })
+// .await
+// .unwrap();
+// fs::write("/Users/eden/Desktop/post.html", &result).unwrap();
 
- // println!("recreated page is {} bytes", result.len());
- Ok(warp::reply::with_header(page, "content-type", "text/html"))
-}
+// println!("recreated page is {} bytes", result.len());
+//  Ok(warp::reply::with_header(page, "content-type", "text/html"))
+// }
 
-async fn listjson_handler(
- path: warp::filters::path::FullPath,
- listjson_tx: mpsc::Sender<(String, oneshot::Sender<String>)>,
-) -> Result<impl warp::Reply, warp::Rejection> {
- let path = path.as_str().trim_start_matches("/listjson/");
- log::info!("path pre {}", path);
+// async fn listjson_handler(
+//  path: warp::filters::path::FullPath,
+//  listjson_tx: mpsc::Sender<(String, oneshot::Sender<String>)>,
+// ) -> Result<impl warp::Reply, warp::Rejection> {
+//  let path = path.as_str().trim_start_matches("/listjson/");
+//  log::info!("path pre {}", path);
 
- let path = urldecode::decode(path.to_owned());
- log::info!("fetching {}", path);
+//  let path = urldecode::decode(path.to_owned());
+//  log::info!("fetching {}", path);
 
- let (resp_tx, resp_rx) = oneshot::channel();
+//  let (resp_tx, resp_rx) = oneshot::channel();
 
- listjson_tx.clone().send((path, resp_tx)).await.unwrap();
+//  listjson_tx.clone().send((path, resp_tx)).await.unwrap();
 
- Ok(resp_rx.await.unwrap())
-}
+//  Ok(resp_rx.await.unwrap())
+// }

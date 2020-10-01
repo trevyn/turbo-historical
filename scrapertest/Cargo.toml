@@ -26,6 +26,6 @@ sysinfo = "0.15.2"
 tokio = {version = "0.2.22", features = ["full"]}
 turbosql = {path = "../turbosql"}
 url = "2.1.1"
-urldecode = "=0.1.1"
-"ux" = {git = "https://github.com/1aim/uX", rev = "e17f5565d27bb4c1ebfd408329c7c075c58f0a0a", features = ["serde"]}
+urlencoding = "1.1.1"
+ux = {git = "https://github.com/1aim/uX", rev = "e17f5565d27bb4c1ebfd408329c7c075c58f0a0a", features = ["serde"]}
 warp = {version = "0.2.5", features = ["tls"]}
