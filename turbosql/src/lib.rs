@@ -110,7 +110,15 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
 
  // something something autotrim file mode on row deletion
 
- conn.execute_batch("PRAGMA journal_mode=WAL;PRAGMA wal_autocheckpoint=0;").unwrap();
+ conn
+  .execute_batch(
+   r"
+    PRAGMA journal_mode=WAL;
+    PRAGMA wal_autocheckpoint=8000;
+    PRAGMA synchronous=NORMAL;
+   ",
+  )
+  .unwrap();
 
  Mutex::new(conn)
 });

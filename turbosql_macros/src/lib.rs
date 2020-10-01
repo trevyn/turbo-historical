@@ -423,7 +423,7 @@ fn do_parse_tokens(
    (
     quote!(#tsr),
     Some(quote! {
-     #[derive(Debug, ::turbosql::Serialize)]
+     #[derive(Debug, Clone, ::turbosql::Serialize)]
      struct #tsr { #(#struct_members),* }
     }),
     None,

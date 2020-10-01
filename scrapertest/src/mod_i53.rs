@@ -58,6 +58,12 @@ impl From<i64> for i53 {
  }
 }
 
+impl i53 {
+ pub fn as_i64(&self) -> i64 {
+  self.0.into()
+ }
+}
+
 impl FromSql for i53 {
  fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
   Ok(value.as_i64()?.into())
