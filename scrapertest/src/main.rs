@@ -257,6 +257,7 @@ impl Query {
   // should be spawn_blocking
   let sys = sysinfo::System::new_all();
   Ok(ActivityMonitor {
+   // these are all reported in kB, so i32 is fine. ;)
    total_memory: sys.get_total_memory() as i32,
    used_memory: sys.get_used_memory() as i32,
    available_memory: sys.get_available_memory() as i32,
@@ -272,6 +273,7 @@ impl Query {
  async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItem>> {
   let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
   let items: Vec<RcloneItem> = serde_json::from_str(&contents)?;
+  let path = urldecode::decode(path);
 
   Ok(
    items
