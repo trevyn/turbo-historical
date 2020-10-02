@@ -31,9 +31,9 @@ struct Person {
 
 use log::{debug, error, info, trace, warn};
 use rusqlite::{Connection, OpenFlags, Statement};
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-
 use std::sync::Mutex;
 
 // re-export
@@ -47,9 +47,7 @@ pub use rusqlite::{
 };
 #[doc(hidden)]
 pub use serde::Serialize;
-pub use turbosql_macros::{
- execute, execute_unchecked, select, select_cte, select_cte_unchecked, select_unchecked, Turbosql,
-};
+pub use turbosql_macros::{execute, select, select_cte, Turbosql};
 
 /// Wrapper for `Vec<u8>` that provides `Read`, `Write` and `Seek` traits.
 pub type Blob = Vec<u8>;
@@ -87,11 +85,16 @@ static __DB_PATH: Lazy<Mutex<DbPath>> = Lazy::new(|| {
  })
 });
 
-// static __DB_OPENED: AtomicBool = AtomicBool::new(false);
+#[derive(Clone, Debug, Deserialize, Default)]
+struct MigrationsToml {
+ migrations_append_only: Option<Vec<String>>,
+ target_schema: Option<String>,
+}
 
 #[doc(hidden)]
 pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
- debug!("in make_connection");
+ let toml_decoded: MigrationsToml = toml::from_str(include_str!("../../migrations.toml"))
+  .expect("Unable to decode embedded migrations.toml");
 
  let mut db_path = __DB_PATH.lock().unwrap();
 
@@ -106,19 +109,55 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
    | OpenFlags::SQLITE_OPEN_CREATE
    | OpenFlags::SQLITE_OPEN_NO_MUTEX,
  )
- .unwrap();
-
- // something something autotrim file mode on row deletion
+ .expect("rusqlite::Connection::open_with_flags");
 
  conn
   .execute_batch(
    r"
+    PRAGMA auto_vacuum=INCREMENTAL;
     PRAGMA journal_mode=WAL;
     PRAGMA wal_autocheckpoint=8000;
     PRAGMA synchronous=NORMAL;
    ",
   )
-  .unwrap();
+  .expect("Setting database PRAGMAs");
+
+ // eprintln!(include_str!("../../migrations.toml"));
+
+ let result = conn.query_row(
+  "SELECT sql FROM sqlite_master WHERE name = ?",
+  params!["turbosql_migrations"],
+  |row| {
+   let sql: String = row.get(0).unwrap();
+   Ok(sql)
+  },
+ );
+
+ match result {
+  Err(rusqlite::Error::QueryReturnedNoRows) => {
+   // no table yet, create
+   conn
+    .execute_batch(
+     r"
+      CREATE TABLE turbosql_migrations (
+       rowid INTEGER PRIMARY KEY,
+       migration TEXT NOT NULL
+      );
+     ",
+    )
+    .expect("CREATE TABLE turbosql_migrations");
+  }
+  Err(err) => {
+   panic!(err);
+  }
+  Ok(sql) => {
+   // already have table, verify it's the same schema
+   // if sql != create_sql {
+   println!("turbosql_migrations is: {:?}", sql);
+   // println!("{}", create_sql);
+   // panic!("Turbosql sqlite schema does not match! Delete database file to continue.");
+  }
+ }
 
  Mutex::new(conn)
 });
@@ -150,38 +189,38 @@ where
  db.execute(sql, params)
 }
 
-#[doc(hidden)]
-pub fn __ensure_table_created(
- table_name: &'static str,
- create_sql: &'static str,
- migrations: Vec<&'static str>,
-) {
- let db = __TURBOSQL_DB.lock().unwrap();
+// #[doc(hidden)]
+// pub fn __ensure_table_created(
+//  table_name: &'static str,
+//  create_sql: &'static str,
+//  migrations: Vec<&'static str>,
+// ) {
+//  let db = __TURBOSQL_DB.lock().unwrap();
 
- let result =
-  db.query_row("SELECT sql FROM sqlite_master WHERE name = ?", params![table_name], |row| {
-   let sql: String = row.get(0).unwrap();
-   Ok(sql)
-  });
+//  let result =
+//   db.query_row("SELECT sql FROM sqlite_master WHERE name = ?", params![table_name], |row| {
+//    let sql: String = row.get(0).unwrap();
+//    Ok(sql)
+//   });
 
- match result {
-  Err(rusqlite::Error::QueryReturnedNoRows) => {
-   // no table yet, create
-   db.execute_batch(create_sql).unwrap();
-  }
-  Err(err) => {
-   panic!(err);
-  }
-  Ok(sql) => {
-   // already have table, verify it's the same schema
-   if sql != create_sql {
-    println!("{}", sql);
-    println!("{}", create_sql);
-    panic!("Turbosql sqlite schema does not match! Delete database file to continue.");
-   }
-  }
- }
-}
+//  match result {
+//   Err(rusqlite::Error::QueryReturnedNoRows) => {
+//    // no table yet, create
+//    db.execute_batch(create_sql).unwrap();
+//   }
+//   Err(err) => {
+//    panic!(err);
+//   }
+//   Ok(sql) => {
+//    // already have table, verify it's the same schema
+//    if sql != create_sql {
+//     println!("{}", sql);
+//     println!("{}", create_sql);
+//     panic!("Turbosql sqlite schema does not match! Delete database file to continue.");
+//    }
+//   }
+//  }
+// }
 
 // pub fn add_table(sql: &str) {
 //  debug!("in add_table");

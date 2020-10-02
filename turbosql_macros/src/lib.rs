@@ -17,8 +17,9 @@ const SQLITE_64BIT_ERROR: &str = r##"Sadly, SQLite cannot natively store unsigne
 use once_cell::sync::Lazy;
 use proc_macro2::Span;
 use proc_macro_error::{abort, abort_call_site, proc_macro_error};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use rusqlite::{Connection, Statement};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use syn::parse::{Parse, ParseStream};
@@ -28,6 +29,8 @@ use syn::{
  parse_macro_input, Data, DeriveInput, Expr, Fields, FieldsNamed, Ident, LitStr, Meta, NestedMeta,
  Token, Type,
 };
+
+const MIGRATIONS_FILENAME: &str = "migrations.toml";
 
 mod create;
 mod insert;
@@ -67,8 +70,8 @@ struct MiniColumn {
  sqltype: &'static str,
 }
 
-static TEST_DB: Lazy<Mutex<Connection>> =
- Lazy::new(|| Mutex::new(Connection::open_in_memory().unwrap()));
+// static TEST_DB: Lazy<Mutex<Connection>> =
+//  Lazy::new(|| Mutex::new(Connection::open_in_memory().unwrap()));
 
 static LAST_TABLE_NAME: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("none".to_string()));
 
@@ -99,32 +102,17 @@ struct QueryParams {
 }
 
 #[derive(Debug)]
-struct SelectCheckedTokens {
+struct SelectTokens {
  tokens: proc_macro2::TokenStream,
 }
 
 #[derive(Debug)]
-struct SelectUncheckedTokens {
+struct SelectCTETokens {
  tokens: proc_macro2::TokenStream,
 }
 
 #[derive(Debug)]
-struct SelectCTECheckedTokens {
- tokens: proc_macro2::TokenStream,
-}
-
-#[derive(Debug)]
-struct SelectCTEUncheckedTokens {
- tokens: proc_macro2::TokenStream,
-}
-
-#[derive(Debug)]
-struct ExecuteCheckedTokens {
- tokens: proc_macro2::TokenStream,
-}
-
-#[derive(Debug)]
-struct ExecuteUncheckedTokens {
+struct ExecuteTokens {
  tokens: proc_macro2::TokenStream,
 }
 
@@ -140,72 +128,6 @@ impl Parse for QueryParams {
   })
  }
 }
-
-// impl Parse for ExecuteTokens {
-//  fn parse(input: ParseStream) -> syn::Result<Self> {
-//   let sql = input.parse::<LitStr>()?.value();
-//   let mut span = input.span();
-
-//   let test_db = TEST_DB.lock().unwrap();
-
-//   let stmt =
-//    test_db.prepare(&sql).unwrap_or_else(|e| abort!(span, "Error verifying SQL: {:?} {:?}", sql, e));
-
-//   span = input.span();
-//   let QueryParams { params } = input.parse()?;
-
-//   let tokens = quote! {
-//  {
-//   (|| -> Result<_, _> {
-//    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
-//    let mut stmt = db.prepare_cached(#sql)?;
-//    stmt.execute(::turbosql::params![#params])
-//   })()
-//  }
-// };
-
-//   if params.len() != stmt.parameter_count() {
-//    abort!(
-//     span,
-//     "Expected {} bound parameter{}, got {}: {:?}",
-//     stmt.parameter_count(),
-//     if stmt.parameter_count() == 1 { "" } else { "s" },
-//     params.len(),
-//     sql
-//    );
-//   }
-
-//   if !input.is_empty() {
-//    return Err(input.error("Expected parameters"));
-//   }
-
-//   Ok(ExecuteTokens { tokens })
-//  }
-// }
-
-// impl Parse for ExecuteUncheckedTokens {
-//  fn parse(input: ParseStream) -> syn::Result<Self> {
-//   let sql = input.parse::<LitStr>()?.value();
-
-//   let QueryParams { params } = input.parse()?;
-
-//   let tokens = quote! {
-//    {
-//     (|| -> Result<_, _> {
-//      let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
-//      let mut stmt = db.prepare_cached(#sql)?;
-//      stmt.execute(::turbosql::params![#params])
-//     })()
-//    }
-//   };
-
-//   if !input.is_empty() {
-//    return Err(input.error("Expected parameters"));
-//   }
-
-//   Ok(ExecuteUncheckedTokens { tokens })
-//  }
-// }
 
 #[derive(Debug)]
 struct MembersAndCasters {
@@ -288,19 +210,88 @@ enum ParseStatementType {
 }
 use ParseStatementType::{Execute, Select, SelectCTE};
 
-enum ParseCheckedType {
- Checked,
- Unchecked,
+struct StatementInfo {
+ parameter_count: usize,
 }
-use ParseCheckedType::{Checked, Unchecked};
+
+#[derive(Clone, Debug, Deserialize, Default)]
+struct MigrationsToml {
+ migrations_append_only: Option<Vec<String>>,
+ target_schema: Option<String>,
+}
+
+fn migrations_to_tempdb(migrations: &Vec<String>) -> Connection {
+ let tempdb = rusqlite::Connection::open_in_memory().unwrap();
+
+ migrations.iter().for_each(|m| {
+  tempdb.execute(m, rusqlite::params![]).expect("Running migrations on temp db");
+ });
+
+ tempdb
+}
+
+fn migrations_to_schema(migrations: &Vec<String>) -> String {
+ let schema = migrations_to_tempdb(migrations)
+  .prepare("SELECT sql FROM sqlite_master WHERE type='table' ORDER BY sql")
+  .unwrap()
+  .query_map(rusqlite::params![], |row| {
+   let sql: String = row.get(0).unwrap();
+   Ok(sql)
+  })
+  .unwrap()
+  .map(|x| x.unwrap())
+  .collect::<Vec<_>>()
+  .join("\n");
+
+ schema
+}
+
+fn read_migrations_toml() -> MigrationsToml {
+ let dir = std::env::current_dir().unwrap();
+
+ let flock = std::fs::File::create(dir.join(".migrations.toml.lock")).unwrap();
+ fs2::FileExt::lock_exclusive(&flock).unwrap();
+
+ let mut migrations_toml_path = dir;
+ migrations_toml_path.push(MIGRATIONS_FILENAME);
+ let migrations_toml_path_lossy = migrations_toml_path.to_string_lossy();
+
+ match migrations_toml_path.exists() {
+  true => {
+   let toml_str = std::fs::read_to_string(&migrations_toml_path)
+    .unwrap_or_else(|e| abort_call_site!("Unable to read {}: {:?}", migrations_toml_path_lossy, e));
+
+   let toml_decoded: MigrationsToml = toml::from_str(&toml_str).unwrap_or_else(|e| {
+    abort_call_site!("Unable to decode toml in {}: {:?}", migrations_toml_path_lossy, e)
+   });
+
+   toml_decoded
+  }
+  false => MigrationsToml { ..Default::default() },
+ }
+}
+
+/// Returns some info extracted from the statement
+/// Aborts macro if invalid
+fn validate_sql(sql: &str) -> StatementInfo {
+ // let toml_decoded: MigrationsToml = toml::from_str(include_str!("../../migrations.toml"))
+ //  .unwrap_or_else(|e| abort_call_site!("Unable to decode embedded migrations.toml: {:?}", e));
+
+ let tempdb = migrations_to_tempdb(&read_migrations_toml().migrations_append_only.unwrap());
+
+ let stmt = tempdb.prepare(&sql).unwrap_or_else(|e| {
+  abort_call_site!(r#"Error validating SQL statement: "{}". SQL: {:?}"#, e, sql)
+ });
+
+ StatementInfo { parameter_count: stmt.parameter_count() }
+}
 
 fn do_parse_tokens(
  input: ParseStream,
  statement_type: ParseStatementType,
- checked: ParseCheckedType,
 ) -> syn::Result<proc_macro2::TokenStream> {
  let span = input.span();
- let test_db = TEST_DB.lock().unwrap();
+ // let test_db = TEST_DB.lock().unwrap();
 
  let result_type = input.parse::<Type>().ok();
 
@@ -345,22 +336,7 @@ fn do_parse_tokens(
   (Execute, _, _) => pred.value(),
  };
 
- // eprintln!("{:#?}", sql);
-
- // // Prepare SQL
- // let sql = match statement_type {
- //  Select => format!("SELECT {}", pred.value()),
- //  Execute => pred.value(),
- // };
-
- // Try checking SQL and react appropriately
- let stmt = test_db.prepare(&sql);
-
- match (&stmt, checked) {
-  (Err(e), Checked) => abort!(span, "Error verifying Turbosql-generated SELECT statement: {:?} {:?}", sql, e),
-  (Ok(_), Unchecked) => abort!(span, "Use `select!` instead of `select_unchecked!` here, because this SQL statement checks out just fine!: {:?}", sql),
-  _ => ()
- };
+ let stmt_info = validate_sql(&sql);
 
  // let stmt_members =
  //  if let Ok(stmt) = stmt { Some(extract_stmt_members(&stmt, &span)) } else { None };
@@ -373,17 +349,15 @@ fn do_parse_tokens(
     #result_type::__select_sql(#sql, ::turbosql::params![#params])
    );
 
-   if let Ok(stmt) = stmt {
-    if params.len() != stmt.parameter_count() {
-     abort!(
-      span,
-      "Expected {} bound parameter{}, got {}: {:?}",
-      stmt.parameter_count(),
-      if stmt.parameter_count() == 1 { "" } else { "s" },
-      params.len(),
-      sql
-     );
-    }
+   if params.len() != stmt_info.parameter_count {
+    abort!(
+     span,
+     "Expected {} bound parameter{}, got {}: {:?}",
+     stmt_info.parameter_count,
+     if stmt_info.parameter_count == 1 { "" } else { "s" },
+     params.len(),
+     sql
+    );
    }
 
    if !input.is_empty() {
@@ -460,39 +434,21 @@ fn do_parse_tokens(
  Ok(tokens)
 }
 
-impl Parse for SelectUncheckedTokens {
+impl Parse for SelectTokens {
  fn parse(input: ParseStream) -> syn::Result<Self> {
-  Ok(SelectUncheckedTokens { tokens: do_parse_tokens(input, Select, Unchecked)? })
+  Ok(SelectTokens { tokens: do_parse_tokens(input, Select)? })
  }
 }
 
-impl Parse for SelectCheckedTokens {
+impl Parse for SelectCTETokens {
  fn parse(input: ParseStream) -> syn::Result<Self> {
-  Ok(SelectCheckedTokens { tokens: do_parse_tokens(input, Select, Checked)? })
+  Ok(SelectCTETokens { tokens: do_parse_tokens(input, SelectCTE)? })
  }
 }
 
-impl Parse for SelectCTEUncheckedTokens {
+impl Parse for ExecuteTokens {
  fn parse(input: ParseStream) -> syn::Result<Self> {
-  Ok(SelectCTEUncheckedTokens { tokens: do_parse_tokens(input, SelectCTE, Unchecked)? })
- }
-}
-
-impl Parse for SelectCTECheckedTokens {
- fn parse(input: ParseStream) -> syn::Result<Self> {
-  Ok(SelectCTECheckedTokens { tokens: do_parse_tokens(input, SelectCTE, Checked)? })
- }
-}
-
-impl Parse for ExecuteUncheckedTokens {
- fn parse(input: ParseStream) -> syn::Result<Self> {
-  Ok(ExecuteUncheckedTokens { tokens: do_parse_tokens(input, Execute, Unchecked)? })
- }
-}
-
-impl Parse for ExecuteCheckedTokens {
- fn parse(input: ParseStream) -> syn::Result<Self> {
-  Ok(ExecuteCheckedTokens { tokens: do_parse_tokens(input, Execute, Checked)? })
+  Ok(ExecuteTokens { tokens: do_parse_tokens(input, Execute)? })
  }
 }
 
@@ -631,14 +587,7 @@ impl Parse for ExecuteCheckedTokens {
 #[proc_macro]
 #[proc_macro_error]
 pub fn execute(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
- let ExecuteCheckedTokens { tokens } = parse_macro_input!(input);
- proc_macro::TokenStream::from(tokens)
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn execute_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
- let ExecuteUncheckedTokens { tokens } = parse_macro_input!(input);
+ let ExecuteTokens { tokens } = parse_macro_input!(input);
  proc_macro::TokenStream::from(tokens)
 }
 
@@ -646,14 +595,7 @@ pub fn execute_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStr
 #[proc_macro]
 #[proc_macro_error]
 pub fn select(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
- let SelectCheckedTokens { tokens } = parse_macro_input!(input);
- proc_macro::TokenStream::from(tokens)
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn select_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
- let SelectUncheckedTokens { tokens } = parse_macro_input!(input);
+ let SelectTokens { tokens } = parse_macro_input!(input);
  proc_macro::TokenStream::from(tokens)
 }
 
@@ -661,14 +603,7 @@ pub fn select_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 #[proc_macro]
 #[proc_macro_error]
 pub fn select_cte(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
- let SelectCTECheckedTokens { tokens } = parse_macro_input!(input);
- proc_macro::TokenStream::from(tokens)
-}
-
-#[proc_macro]
-#[proc_macro_error]
-pub fn select_cte_unchecked(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
- let SelectCTEUncheckedTokens { tokens } = parse_macro_input!(input);
+ let SelectCTETokens { tokens } = parse_macro_input!(input);
  proc_macro::TokenStream::from(tokens)
 }
 

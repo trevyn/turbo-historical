@@ -1,15 +1,11 @@
-use super::{Table, TEST_DB};
-use proc_macro_error::abort_call_site;
+use super::Table;
 use quote::quote;
 
 /// SELECT name1, name2... FROM tablename
 pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
  let sql = makesql_select(&table);
- eprintln!("{}", sql);
 
- TEST_DB.lock().unwrap().prepare_cached(sql.as_str()).unwrap_or_else(|e| {
-  abort_call_site!("Error verifying turbosql-generated SELECT statement:\n{}\n{:#?}", sql, e)
- });
+ super::validate_sql(&sql);
 
  let quotes = table
   .columns
@@ -26,7 +22,7 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
 
  quote! {
   pub fn select_all() -> Vec<#table> {
-   #table::__turbosql_ensure_table_created();
+   // #table::__turbosql_ensure_table_created();
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
    let mut stmt = db.prepare_cached(#sql).unwrap();
 
@@ -45,10 +41,9 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
   P: IntoIterator,
   P::Item: ::turbosql::ToSql,
   {
-   #table::__turbosql_ensure_table_created();
+   // #table::__turbosql_ensure_table_created();
 
    let sql = format!("{} WHERE {}", #sql, where_clause);
-   println!("{}", sql);
 
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
    let mut stmt = db.prepare_cached(&sql).unwrap();
@@ -68,7 +63,7 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
   P: IntoIterator,
   P::Item: ::turbosql::ToSql,
   {
-   #table::__turbosql_ensure_table_created();
+   // #table::__turbosql_ensure_table_created();
 
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
    let mut stmt = db.prepare_cached(&sql).unwrap();
@@ -88,7 +83,7 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
   P: IntoIterator,
   P::Item: ::turbosql::ToSql,
   {
-   #table::__turbosql_ensure_table_created();
+   // #table::__turbosql_ensure_table_created();
 
    let sql = format!("{} WHERE {} LIMIT 1", #sql, where_clause);
    // trace!("{}", sql);

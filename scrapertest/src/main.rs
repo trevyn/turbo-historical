@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Clap;
 use juniper::{graphql_object, EmptySubscription, FieldResult, GraphQLObject};
+use log::info;
 use once_cell::sync::Lazy;
 use reqwest::header;
 use scraper::{Html, Selector};
@@ -13,7 +14,7 @@ use std::time::SystemTime;
 use sysinfo::SystemExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::spawn_blocking;
-use turbosql::{execute, execute_unchecked, select, select_unchecked, Blob, Turbosql};
+use turbosql::{execute, select, Blob, Turbosql};
 use url::Url;
 use warp::http::Method;
 use warp::Filter;
@@ -96,6 +97,13 @@ struct Filecache {
  bytes: Option<Blob>,
 }
 
+#[derive(Turbosql, Clone, Debug, Default)]
+struct FileKnowledge {
+ rowid: Option<i64>,
+ file_id: Option<i64>,
+ kind: Option<String>,
+ value: Option<String>,
+}
 /// Receive a Filecache entry from Go and insert into turbosql
 /// buf is only valid until function return, must be copied
 #[no_mangle]
@@ -322,7 +330,7 @@ async fn instant_search(query: String) -> FieldResult<Vec<ResultItem>> {
 
  log::info!("match_query = {:?}", match_query);
 
- Ok(select_unchecked!(ResultItem r#"
+ Ok(select!(ResultItem r#"
   search_highlighted_url_String,
   title_String,
   snippet_String,
@@ -378,7 +386,7 @@ async fn scrape_search(query: String) -> FieldResult<Vec<ResultItem>> {
  ResultItem::insert_batch(&results);
 
  for result in &results {
-  execute_unchecked!(
+  execute!(
    "INSERT INTO resultitem2(url, title, snippet, host) VALUES (?, ?, ?, ?)",
    result.url,
    result.title,
@@ -394,7 +402,7 @@ async fn scrape_search(query: String) -> FieldResult<Vec<ResultItem>> {
 
  log::info!("match_query = {:?}", match_query);
 
- Ok(select_unchecked!(ResultItem r#"
+ Ok(select!(ResultItem r#"
   search_highlighted_url_String,
   title_String,
   snippet_String,
@@ -470,15 +478,78 @@ impl Mutations {
 type Schema = juniper::RootNode<'static, Query, Mutations, EmptySubscription>;
 
 #[tokio::main]
-async fn main() {
- std::env::set_var("RUST_LOG", "scrapertest");
+async fn main() -> anyhow::Result<()> {
+ std::env::set_var("RUST_LOG", "info");
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");
 
- execute!("CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)").ok();
- HostAffection::select_all();
- Bookmark::select_all();
- ResultItem::select_all();
+ // info!("one is {:?}", select!("1 as one_i64")?);
+ // execute!("").ok();
+
+ // execute!("CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)").ok();
+
+ info!("reading!");
+ let items = RcloneItem::select_all();
+ info!("read! {}", items.len());
+ let rows = select!("max(rowid) AS max_file_id_i64 FROM fileknowledge")?;
+ let mut max_file_id = match rows.len() {
+  0 => 1,
+  _ => rows[0].max_file_id,
+ };
+
+ execute!("BEGIN TRANSACTION").unwrap();
+
+ let _ = items
+  .iter()
+  .map(|item| -> anyhow::Result<()> {
+   // info!("{:?} {:?}", item.name, item.size);
+
+   max_file_id = max_file_id + 1;
+   // info!("{:?}", max_file_id);
+
+   if item.size.clone().context("size")?.as_i64() > 0 {
+   execute!(
+    r#"INSERT INTO fileknowledge (file_id, kind, value) VALUES (?, "name", ?), (?, "size", ?), (?, "localid", ?)"#,
+    max_file_id,
+    item.name,
+    max_file_id,
+    item.size,
+    max_file_id,
+    item.id
+   )
+   .unwrap();
+  }
+
+   // FileKnowledge {
+   //  rowid: None,
+   //  file_id: Some(max_file_id),
+   //  kind: Some("size".to_string()),
+   //  value: Some(item.size.clone().unwrap().to_string()),
+   // }
+   // .insert()
+   // .unwrap();
+
+   // FileKnowledge {
+   //  rowid: None,
+   //  file_id: Some(max_file_id),
+   //  kind: Some("name".to_string()),
+   //  value: Some(item.name.clone().unwrap()),
+   // }
+   // .insert()
+   // .unwrap();
+
+   Ok(())
+  })
+  .collect::<Vec<_>>();
+
+ execute!("COMMIT").unwrap();
+
+ // info!("reading files!");
+ // let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
+ // let items: Vec<RcloneItem> = serde_json::from_str(&contents)?;
+ // RcloneItem::insert_batch(&items);
+
+ // info!("inserted!");
 
  let opts = Opts::parse();
  let authorization = Box::leak(format!("Bearer {}", opts.password).into_boxed_str());
@@ -587,6 +658,8 @@ async fn main() {
   }
   _ => panic!("Both key-path and cert-path must be specified for HTTPS."),
  }
+
+ Ok(())
 }
 
 fn with_sender(

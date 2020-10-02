@@ -1,17 +1,11 @@
-use super::{Table, TEST_DB};
-use proc_macro_error::abort_call_site;
+use super::Table;
 use quote::quote_spanned;
 
 /// INSERT INTO tablename (name1, name2...) VALUES (?1, ?2...)
 pub(super) fn insert(table: &Table) -> proc_macro2::TokenStream {
  let sql = makesql_insert(&table);
- eprintln!("{}", sql);
 
- TEST_DB
-  .lock()
-  .unwrap()
-  .prepare_cached(&sql)
-  .expect("Error verifying turbosql-generated INSERT INTO statement");
+ super::validate_sql(&sql);
 
  // let idents = table.columns.iter().map(|c| &c.ident).collect::<Vec<_>>();
  let columns = table
@@ -26,7 +20,7 @@ pub(super) fn insert(table: &Table) -> proc_macro2::TokenStream {
  quote_spanned! { table.span =>
   #[allow(dead_code)]
   pub fn insert(&self) -> ::turbosql::Result<usize> {
-   #table::__turbosql_ensure_table_created();
+   // #table::__turbosql_ensure_table_created();
    assert!(self.rowid.is_none());
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();  // todo: use tokio's lock?
    let mut stmt = db.prepare_cached(#sql)?;
