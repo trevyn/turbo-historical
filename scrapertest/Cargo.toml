@@ -21,7 +21,7 @@ reqwest = "0.10.8"
 rust-embed = "5.6.0"
 scraper = "0.12.0"
 serde = {version = "1.0.116", features = ["derive"]}
-serde_json = "1.0.57"
+serde_json = "1.0.58"
 sysinfo = "0.15.2"
 tokio = {version = "0.2.22", features = ["full"]}
 turbosql = {path = "../turbosql"}
