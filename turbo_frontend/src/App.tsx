@@ -709,7 +709,7 @@ const FilesComponent: FC = () => {
        ) : (
         <>
          <Icons.ChevronRightSmall className="flex-shrink-0 mx-2 h-5 w-5 text-gray-400" />
-         <Link to={"/files/" + newPathString}>
+         <Link to={"/files/" + newPathString + "/"}>
           <span
            // onClick={() => setPath(newPathString)}
            className="cursor-pointer text-gray-500 hover:text-gray-700 hover:underline form-selecttransition duration-150 ease-in-out"
