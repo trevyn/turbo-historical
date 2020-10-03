@@ -437,12 +437,12 @@ const ResultsComponent: FC<{
       <div className="flex-none w-12 h-24 mr-2">
        <Icon
         svgFunction={Icons.EmojiHappy}
-        className={(item.hostaffection ?? 0) > 0 ? "animate-ping2" : "animate-ping3"}
-        selected={(item.hostaffection ?? 0) > 0}
+        className={item.hostaffection > 0 ? "animate-ping2" : "animate-ping3"}
+        selected={item.hostaffection > 0}
         onClick={(e: SyntheticEvent) => {
          if (item.host)
           setHostAffectionMutation({
-           variables: { host: item.host, affection: (item.hostaffection ?? 0) === 1 ? 0 : 1 },
+           variables: { host: item.host, affection: item.hostaffection === 1 ? 0 : 1 },
           });
          // let newSearchResult = searchResult.slice();
          // newSearchResult[itemidx] = {
@@ -459,17 +459,17 @@ const ResultsComponent: FC<{
         className={
          (item.bookmarked ? "animate-ping2" : "animate-ping3") +
          " " +
-         (!((item.hostaffection ?? 0) > 0) && item.bookmarked
+         (!(item.hostaffection > 0) && item.bookmarked
           ? "-translate-y-8 group-hover:translate-y-0"
           : "")
         }
-        selected={item.bookmarked ?? false}
+        selected={item.bookmarked}
         onClick={(e: SyntheticEvent) => {
          if (item.url)
           setBookmarkedMutation({
            variables: {
             url: item.url,
-            bookmarked: !(item.bookmarked ?? false),
+            bookmarked: !item.bookmarked,
            },
           });
          // let newSearchResult = searchResult.slice();
@@ -482,21 +482,21 @@ const ResultsComponent: FC<{
        <Icon
         svgFunction={Icons.ThumbDown}
         className={
-         ((item.hostaffection ?? 0) < 0 ? "animate-ping2" : "animate-ping3") +
+         (item.hostaffection < 0 ? "animate-ping2" : "animate-ping3") +
          " " +
-         ((item.hostaffection ?? 0) < 0
+         (item.hostaffection < 0
           ? item.bookmarked
             ? "-translate-y-8 group-hover:translate-y-0"
             : "-translate-y-16 group-hover:translate-y-0"
           : "")
         }
-        selected={(item.hostaffection ?? 0) < 0}
+        selected={item.hostaffection < 0}
         onClick={(e: SyntheticEvent) => {
          if (item.host)
           setHostAffectionMutation({
            variables: {
             host: item.host,
-            affection: (item.hostaffection ?? 0) === -1 ? 0 : -1,
+            affection: item.hostaffection === -1 ? 0 : -1,
            },
           });
 
@@ -514,7 +514,7 @@ const ResultsComponent: FC<{
       <div>
        <div
         className="block pt-0.5 text-gray-600 group-hover:underline text-lg font-medium"
-        dangerouslySetInnerHTML={{ __html: item.title ?? "" }}
+        dangerouslySetInnerHTML={{ __html: item.title }}
         // rel="noopener noreferrer"
         // target="_blank"
         // onClick={async () => {
@@ -523,7 +523,7 @@ const ResultsComponent: FC<{
         //  );
         //  console.log(DOMPurify.sanitize(await result.text()));
         // }}
-        // href={item.url ?? ""}
+        // href={item.url}
        ></div>
        <div>
         <span
