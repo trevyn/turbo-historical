@@ -320,6 +320,8 @@ fn do_parse_tokens(
   None
  };
 
+ eprintln!("{}, {:?}", pred, stmt_info);
+
  let sql = match (&statement_type, &result_type, &stmt_info, &explicit_members) {
   (Select, Some(_result_type), Some(_stmt_info), None) => {
    // result type and stmt_info
@@ -408,8 +410,9 @@ fn do_parse_tokens(
    _ => abort!(span, "Expected explicitly typed return values or a return type."),
   };
 
- let (result_type, struct_decl, default) = match result_type {
-  Some(t) => (quote!(#t), None, Some(quote!(, ..Default::default()))),
+ let (result_type, struct_decl) = match result_type {
+  Some(t) => (quote!(#t), None),
+  // Some(t) => (quote!(#t), None, Some(quote!(, ..Default::default()))),
   None => {
    let tsr = format_ident!("TurbosqlResult");
    (
@@ -418,7 +421,6 @@ fn do_parse_tokens(
      #[derive(Debug, Clone, ::turbosql::Serialize)]
      struct #tsr { #(#struct_members),* }
     }),
-    None,
    )
   }
  };
@@ -432,7 +434,7 @@ fn do_parse_tokens(
     let result = stmt.query_map(::turbosql::params![#params], |row| {
      Ok(#result_type {
       #(#row_casters),*
-      #default
+      // #default
      })
     })?.collect::<Vec<_>>();
 

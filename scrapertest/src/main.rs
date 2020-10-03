@@ -156,8 +156,6 @@ struct ResultItem {
  #[graphql(skip)]
  rowid: Option<i64>,
  url: Option<String>,
- #[turbosql(skip)]
- search_highlighted_url: Option<String>,
  host: Option<String>,
  title: Option<String>,
  snippet: Option<String>,
@@ -165,14 +163,29 @@ struct ResultItem {
  source_query_url: Option<String>,
  source_result_pos: Option<i32>,
  last_scraped: Option<f64>,
- #[turbosql(skip)]
- bookmarked: Option<bool>,
- #[turbosql(skip)]
- bookmark_timestamp: Option<f64>,
- #[turbosql(skip)]
- rank: Option<f64>,
- #[turbosql(skip)]
- hostaffection: Option<i32>,
+}
+
+#[derive(GraphQLObject, Clone, Debug)]
+struct SearchQueryResultItem {
+ search_highlighted_url: String,
+ title: String,
+ snippet: String,
+ url: String,
+ host: String,
+ bookmarked: bool,
+ hostaffection: i32,
+ rank: f64,
+}
+
+#[derive(GraphQLObject, Clone, Debug)]
+struct BookmarkQueryResult {
+ bookmark_timestamp: f64,
+ title: String,
+ snippet: String,
+ url: String,
+ host: String,
+ bookmarked: bool,
+ hostaffection: i32,
 }
 
 #[derive(GraphQLObject, Turbosql, Debug, Default, Clone)]
@@ -224,35 +237,35 @@ struct Query;
 
 #[graphql_object]
 impl Query {
- async fn get_bookmarks() -> FieldResult<Vec<ResultItem>> {
-  Ok(select!(ResultItem r#"
-   url_String,
-   title_String,
-   host_String,
-   snippet_String,
-   bookmarked_bool,
-   hostaffection_i32,
-   bookmark_timestamp_f64
+ async fn get_bookmarks() -> FieldResult<Vec<BookmarkQueryResult>> {
+  Ok(select!(BookmarkQueryResult r#"
+   url,
+   title,
+   host,
+   snippet,
+   bookmarked,
+   hostaffection,
+   bookmark_timestamp
    FROM (
     SELECT
-    bookmark.url as url_String,
-    resultitem.title as title_String,
-    resultitem.host as host_String,
-    resultitem.snippet as snippet_String,
-    true as bookmarked_bool,
-    hostaffection.affection as hostaffection_i32,
-    bookmark.timestamp as bookmark_timestamp_f64
+    bookmark.url as url,
+    resultitem.title as title,
+    resultitem.host as host,
+    resultitem.snippet as snippet,
+    true as bookmarked,
+    hostaffection.affection as hostaffection,
+    bookmark.timestamp as bookmark_timestamp
     FROM bookmark
     LEFT JOIN resultitem ON resultitem.url = bookmark.url
     LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
-    ORDER BY bookmark_timestamp_f64 DESC, resultitem.last_scraped DESC
+    ORDER BY bookmark_timestamp DESC, resultitem.last_scraped DESC
    )
-   GROUP BY url_String
-   ORDER BY bookmark_timestamp_f64 DESC
+   GROUP BY url
+   ORDER BY bookmark_timestamp DESC
   "#)?)
  }
 
- async fn search(query: String, force_scrape: bool) -> FieldResult<Vec<ResultItem>> {
+ async fn search(query: String, force_scrape: bool) -> FieldResult<Vec<SearchQueryResultItem>> {
   if force_scrape {
    log::info!("scrape_search({:?})", query);
    return scrape_search(query).await;
@@ -309,13 +322,13 @@ fn convert_query_for_fts5(query: String) -> String {
  query
 }
 
-async fn instant_search(query: String) -> FieldResult<Vec<ResultItem>> {
+async fn instant_search(query: String) -> FieldResult<Vec<SearchQueryResultItem>> {
  let match_query = convert_query_for_fts5(query.clone());
  // let query = convert_query_for_fts5(query.clone()).split(" ").collect::<Vec<_>>().join(" OR ");
 
  log::info!("match_query = {:?}", match_query);
 
- Ok(select!(ResultItem r#"
+ Ok(select!(SearchQueryResultItem r#"
   search_highlighted_url_String,
   title_String,
   snippet_String,
@@ -346,7 +359,7 @@ async fn instant_search(query: String) -> FieldResult<Vec<ResultItem>> {
  "#, match_query)?)
 }
 
-async fn scrape_search(query: String) -> FieldResult<Vec<ResultItem>> {
+async fn scrape_search(query: String) -> FieldResult<Vec<SearchQueryResultItem>> {
  // *LAST_SCRAPE.lock().unwrap() = SystemTime::now();
  let results =
   do_scrape(&query, "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0")
@@ -387,7 +400,7 @@ async fn scrape_search(query: String) -> FieldResult<Vec<ResultItem>> {
 
  log::info!("match_query = {:?}", match_query);
 
- Ok(select!(ResultItem r#"
+ Ok(select!(SearchQueryResultItem r#"
   search_highlighted_url_String,
   title_String,
   snippet_String,

@@ -1,18 +1,12 @@
 query getBookmarks {
  getBookmarks
  {
-  url
-  searchHighlightedUrl
-  host
+  bookmarkTimestamp
   title
   snippet
-  sourceQuery
-  sourceQueryUrl
-  sourceResultPos
-  lastScraped
+  url
+  host
   bookmarked
-  bookmarkTimestamp
-  rank
   hostaffection
  }
 }
@@ -20,19 +14,14 @@ query getBookmarks {
 query search($query: String!, $forceScrape: Boolean!) {
  search(query: $query, forceScrape: $forceScrape)
  {
-  url
   searchHighlightedUrl
-  host
   title
   snippet
-  sourceQuery
-  sourceQueryUrl
-  sourceResultPos
-  lastScraped
+  url
+  host
   bookmarked
-  bookmarkTimestamp
-  rank
   hostaffection
+  rank
  }
 }
 

@@ -403,7 +403,9 @@ const SearchComponent: FC = () => {
  );
 };
 
-const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) => {
+const ResultsComponent: FC<{
+ results: (codegen.SearchQueryResultItem | codegen.BookmarkQueryResult)[];
+}> = ({ results }) => {
  const [setHostAffectionMutation] = codegen.useSetHostAffectionMutation();
  const [setBookmarkedMutation] = codegen.useSetBookmarkedMutation();
 
@@ -412,7 +414,7 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
  return (
   <>
    {results &&
-    results.map((item: codegen.ResultItem) => (
+    results.map(item => (
      <div
       className="group flex cursor-pointer p-3 pt-2 hover:bg-indigo-100 rounded-lg"
       onClick={(e: SyntheticEvent) => {
@@ -526,7 +528,9 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
        <div>
         <span
          className="text-sm text-green-500"
-         dangerouslySetInnerHTML={{ __html: item.searchHighlightedUrl || item.url || "" }}
+         dangerouslySetInnerHTML={{
+          __html: "searchHighlightedUrl" in item ? item.searchHighlightedUrl : item.url,
+         }}
         ></span>
         <span
          className="pl-4 text-sm text-gray-500 hover:text-gray-700 underline"
@@ -551,9 +555,11 @@ const ResultsComponent: FC<{ results: codegen.ResultItem[] }> = ({ results }) =>
        </div>
        <div
         className="text-sm text-gray-500"
-        dangerouslySetInnerHTML={{ __html: item.snippet ?? "" }}
+        dangerouslySetInnerHTML={{ __html: item.snippet }}
        ></div>
-       <div className="text-sm text-gray-300">Rank {item.rank?.toFixed(2)}</div>
+       <div className="text-sm text-gray-300">
+        {"rank" in item ? `Rank ${item.rank.toFixed(2)}` : ""}
+       </div>
       </div>
      </div>
     ))}

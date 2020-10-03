@@ -35,27 +35,33 @@ export type ActivityMonitor = {
   usedSwap: Scalars['Int'];
 };
 
-export type ResultItem = {
-  __typename?: 'ResultItem';
-  url?: Maybe<Scalars['String']>;
-  searchHighlightedUrl?: Maybe<Scalars['String']>;
-  host?: Maybe<Scalars['String']>;
-  title?: Maybe<Scalars['String']>;
-  snippet?: Maybe<Scalars['String']>;
-  sourceQuery?: Maybe<Scalars['String']>;
-  sourceQueryUrl?: Maybe<Scalars['String']>;
-  sourceResultPos?: Maybe<Scalars['Int']>;
-  lastScraped?: Maybe<Scalars['Float']>;
-  bookmarked?: Maybe<Scalars['Boolean']>;
-  bookmarkTimestamp?: Maybe<Scalars['Float']>;
-  rank?: Maybe<Scalars['Float']>;
-  hostaffection?: Maybe<Scalars['Int']>;
+export type BookmarkQueryResult = {
+  __typename?: 'BookmarkQueryResult';
+  bookmarkTimestamp: Scalars['Float'];
+  title: Scalars['String'];
+  snippet: Scalars['String'];
+  url: Scalars['String'];
+  host: Scalars['String'];
+  bookmarked: Scalars['Boolean'];
+  hostaffection: Scalars['Int'];
+};
+
+export type SearchQueryResultItem = {
+  __typename?: 'SearchQueryResultItem';
+  searchHighlightedUrl: Scalars['String'];
+  title: Scalars['String'];
+  snippet: Scalars['String'];
+  url: Scalars['String'];
+  host: Scalars['String'];
+  bookmarked: Scalars['Boolean'];
+  hostaffection: Scalars['Int'];
+  rank: Scalars['Float'];
 };
 
 export type Query = {
   __typename?: 'Query';
-  getBookmarks: Array<ResultItem>;
-  search: Array<ResultItem>;
+  getBookmarks: Array<BookmarkQueryResult>;
+  search: Array<SearchQueryResultItem>;
   getActivityMonitor: ActivityMonitor;
   getCommitHash: Scalars['String'];
   getRcloneItems: Array<RcloneItem>;
@@ -97,8 +103,8 @@ export type GetBookmarksQueryVariables = Exact<{ [key: string]: never; }>;
 export type GetBookmarksQuery = (
   { __typename?: 'Query' }
   & { getBookmarks: Array<(
-    { __typename?: 'ResultItem' }
-    & Pick<ResultItem, 'url' | 'searchHighlightedUrl' | 'host' | 'title' | 'snippet' | 'sourceQuery' | 'sourceQueryUrl' | 'sourceResultPos' | 'lastScraped' | 'bookmarked' | 'bookmarkTimestamp' | 'rank' | 'hostaffection'>
+    { __typename?: 'BookmarkQueryResult' }
+    & Pick<BookmarkQueryResult, 'bookmarkTimestamp' | 'title' | 'snippet' | 'url' | 'host' | 'bookmarked' | 'hostaffection'>
   )> }
 );
 
@@ -111,8 +117,8 @@ export type SearchQueryVariables = Exact<{
 export type SearchQuery = (
   { __typename?: 'Query' }
   & { search: Array<(
-    { __typename?: 'ResultItem' }
-    & Pick<ResultItem, 'url' | 'searchHighlightedUrl' | 'host' | 'title' | 'snippet' | 'sourceQuery' | 'sourceQueryUrl' | 'sourceResultPos' | 'lastScraped' | 'bookmarked' | 'bookmarkTimestamp' | 'rank' | 'hostaffection'>
+    { __typename?: 'SearchQueryResultItem' }
+    & Pick<SearchQueryResultItem, 'searchHighlightedUrl' | 'title' | 'snippet' | 'url' | 'host' | 'bookmarked' | 'hostaffection' | 'rank'>
   )> }
 );
 
@@ -174,18 +180,12 @@ export type SetBookmarkedMutation = (
 export const GetBookmarksDocument = gql`
     query getBookmarks {
   getBookmarks {
-    url
-    searchHighlightedUrl
-    host
+    bookmarkTimestamp
     title
     snippet
-    sourceQuery
-    sourceQueryUrl
-    sourceResultPos
-    lastScraped
+    url
+    host
     bookmarked
-    bookmarkTimestamp
-    rank
     hostaffection
   }
 }
@@ -218,19 +218,14 @@ export type GetBookmarksQueryResult = Apollo.QueryResult<GetBookmarksQuery, GetB
 export const SearchDocument = gql`
     query search($query: String!, $forceScrape: Boolean!) {
   search(query: $query, forceScrape: $forceScrape) {
-    url
     searchHighlightedUrl
-    host
     title
     snippet
-    sourceQuery
-    sourceQueryUrl
-    sourceResultPos
-    lastScraped
+    url
+    host
     bookmarked
-    bookmarkTimestamp
-    rank
     hostaffection
+    rank
   }
 }
     `;

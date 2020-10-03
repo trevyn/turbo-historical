@@ -11,6 +11,16 @@ type ActivityMonitor {
   usedSwap: Int!
 }
 
+type BookmarkQueryResult {
+  bookmarkTimestamp: Float!
+  title: String!
+  snippet: String!
+  url: String!
+  host: String!
+  bookmarked: Boolean!
+  hostaffection: Int!
+}
+
 """
 i53: 53-bit signed integer; represented as `i53`/`i64` in Rust, `Float` in GraphQL, `number` in TypeScript.
 """
@@ -22,8 +32,8 @@ type Mutations {
 }
 
 type Query {
-  getBookmarks: [ResultItem!]!
-  search(query: String!, forceScrape: Boolean!): [ResultItem!]!
+  getBookmarks: [BookmarkQueryResult!]!
+  search(query: String!, forceScrape: Boolean!): [SearchQueryResultItem!]!
   getActivityMonitor: ActivityMonitor!
   getCommitHash: String!
   getRcloneItems(path: String!): [RcloneItem!]!
@@ -40,19 +50,14 @@ type RcloneItem {
   dirSize: i53
 }
 
-type ResultItem {
-  url: String
-  searchHighlightedUrl: String
-  host: String
-  title: String
-  snippet: String
-  sourceQuery: String
-  sourceQueryUrl: String
-  sourceResultPos: Int
-  lastScraped: Float
-  bookmarked: Boolean
-  bookmarkTimestamp: Float
-  rank: Float
-  hostaffection: Int
+type SearchQueryResultItem {
+  searchHighlightedUrl: String!
+  title: String!
+  snippet: String!
+  url: String!
+  host: String!
+  bookmarked: Boolean!
+  hostaffection: Int!
+  rank: Float!
 }
 
