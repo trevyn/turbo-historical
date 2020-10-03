@@ -5,7 +5,7 @@ use quote::quote;
 pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
  let sql = makesql_select(&table);
 
- super::validate_sql(&sql);
+ super::validate_sql_or_abort(&sql);
 
  let quotes = table
   .columns

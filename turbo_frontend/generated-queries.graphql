@@ -61,6 +61,7 @@ query getRcloneItems($path: String!) {
   mimeType
   modTime
   isDir
+  dirSize
  }
 }
 

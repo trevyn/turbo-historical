@@ -210,8 +210,10 @@ enum ParseStatementType {
 }
 use ParseStatementType::{Execute, Select, SelectCTE};
 
+#[derive(Debug)]
 struct StatementInfo {
  parameter_count: usize,
+ column_names: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -273,17 +275,21 @@ fn read_migrations_toml() -> MigrationsToml {
 
 /// Returns some info extracted from the statement
 /// Aborts macro if invalid
-fn validate_sql(sql: &str) -> StatementInfo {
- // let toml_decoded: MigrationsToml = toml::from_str(include_str!("../../migrations.toml"))
- //  .unwrap_or_else(|e| abort_call_site!("Unable to decode embedded migrations.toml: {:?}", e));
-
+fn validate_sql(sql: &str) -> Result<StatementInfo, rusqlite::Error> {
  let tempdb = migrations_to_tempdb(&read_migrations_toml().migrations_append_only.unwrap());
 
- let stmt = tempdb.prepare(&sql).unwrap_or_else(|e| {
-  abort_call_site!(r#"Error validating SQL statement: "{}". SQL: {:?}"#, e, sql)
- });
+ let stmt = tempdb.prepare(&sql)?;
 
- StatementInfo { parameter_count: stmt.parameter_count() }
+ Ok(StatementInfo {
+  parameter_count: stmt.parameter_count(),
+  column_names: stmt.column_names().iter().map(|s| s.to_string()).collect(),
+ })
+}
+
+fn validate_sql_or_abort(sql: &str) -> StatementInfo {
+ validate_sql(sql).unwrap_or_else(|e| {
+  abort_call_site!(r#"Error validating SQL statement: "{}". SQL: {:?}"#, e, sql)
+ })
 }
 
 fn do_parse_tokens(
@@ -291,30 +297,36 @@ fn do_parse_tokens(
  statement_type: ParseStatementType,
 ) -> syn::Result<proc_macro2::TokenStream> {
  let span = input.span();
- // let test_db = TEST_DB.lock().unwrap();
 
  let result_type = input.parse::<Type>().ok();
-
- // eprintln!("result_type = {:#?}", result_type);
-
- let pred: LitStr = input.parse()?;
-
- // eprintln!("pred = {:#?}", pred.value());
+ let pred = input.parse::<LitStr>()?.value();
 
  // See if we have any explicitly declared columns
- // Neline
- let explicit_members = extract_explicit_members(&pred.value());
+ let explicit_members = extract_explicit_members(&pred);
 
  let explicit_members =
   if explicit_members.members.is_empty() { None } else { Some(explicit_members) };
 
- // eprintln!("explicit_members = {:#?}", explicit_members);
+ // test sql statement for validity with just adding SELECT
+ // TODO: use this same technique to check for CTE statements
+ //       that start with WITH instead of SELECT before adding SELECT
 
- // If we have a result type and no explicit members, synthesize the members
+ let stmt_info = if let Select = statement_type {
+  match validate_sql(&format!("SELECT {}", pred)) {
+   Ok(stmt_info) => Some(stmt_info),
+   Err(_) => None,
+  }
+ } else {
+  None
+ };
 
- let sql = match (&statement_type, &result_type, &explicit_members) {
-  (Select, Some(result_type), None) => {
-   // Table
+ let sql = match (&statement_type, &result_type, &stmt_info, &explicit_members) {
+  (Select, Some(_result_type), Some(_stmt_info), None) => {
+   // result type and stmt_info
+   format!("SELECT {}", pred)
+  }
+  (Select, Some(result_type), None, None) => {
+   // result type and no explicit_members
    let table_name = quote!(#result_type).to_string().to_lowercase();
    let tables = TABLES.lock().unwrap();
    let table = tables.get(&table_name).unwrap_or_else(|| {
@@ -328,67 +340,73 @@ fn do_parse_tokens(
 
    let column_names_str =
     table.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(", ");
-   // eprintln!("synthesized members: {:#?}", column_names_str);
-   format!("SELECT {} FROM {} {}", column_names_str, table_name, pred.value())
+
+   format!("SELECT {} FROM {} {}", column_names_str, table_name, pred)
   }
-  (Select, _, _) => format!("SELECT {}", pred.value()),
-  (SelectCTE, _, _) => pred.value(),
-  (Execute, _, _) => pred.value(),
+  (Select, _, _, _) => format!("SELECT {}", pred),
+  (SelectCTE, _, _, _) => pred,
+  (Execute, _, _, _) => pred,
  };
 
- let stmt_info = validate_sql(&sql);
+ let stmt_info = validate_sql_or_abort(&sql);
 
- // let stmt_members =
- //  if let Ok(stmt) = stmt { Some(extract_stmt_members(&stmt, &span)) } else { None };
+ // get query params and validate their count against what the statement is expecting
 
  let QueryParams { params } = input.parse()?;
 
- let (struct_members, row_casters) = match (&statement_type, &result_type, explicit_members) {
-  (Select, Some(result_type), None) => {
-   let tokens = quote!(
-    #result_type::__select_sql(#sql, ::turbosql::params![#params])
-   );
+ if params.len() != stmt_info.parameter_count {
+  abort!(
+   span,
+   "Expected {} bound parameter{}, got {}: {:?}",
+   stmt_info.parameter_count,
+   if stmt_info.parameter_count == 1 { "" } else { "s" },
+   params.len(),
+   sql
+  );
+ }
 
-   if params.len() != stmt_info.parameter_count {
-    abort!(
-     span,
-     "Expected {} bound parameter{}, got {}: {:?}",
-     stmt_info.parameter_count,
-     if stmt_info.parameter_count == 1 { "" } else { "s" },
-     params.len(),
-     sql
-    );
+ if !input.is_empty() {
+  return Err(input.error("Expected parameters"));
+ }
+
+ // dispatch
+
+ let (struct_members, row_casters) =
+  match (&statement_type, &result_type, &stmt_info, explicit_members) {
+   (Select, Some(_result_type), stmt_info, None) => {
+    let members: Vec<_> = stmt_info
+     .column_names
+     .iter()
+     .enumerate()
+     .map(|(i, col_name)| (format_ident!("{}", col_name), format_ident!("None"), i))
+     .collect();
+
+    let m = MembersAndCasters::create(members);
+
+    (m.struct_members, m.row_casters)
    }
 
-   if !input.is_empty() {
-    return Err(input.error("Expected parameters"));
+   (Select, _, _, Some(m)) => (m.struct_members, m.row_casters),
+   (SelectCTE, _, _, Some(m)) => (m.struct_members, m.row_casters),
+   (Execute, _, _, _) => {
+    let tokens = quote! {
+    {
+     (|| -> Result<_, _> {
+      let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
+      let mut stmt = db.prepare_cached(#sql)?;
+      stmt.execute(::turbosql::params![#params])
+     })()
+    }
+    };
+
+    if !input.is_empty() {
+     return Err(input.error("Expected parameters or ')'"));
+    }
+
+    return Ok(tokens);
    }
-
-   return Ok(tokens);
-  }
-  (Select, _, Some(m)) => (m.struct_members, m.row_casters),
-  (SelectCTE, _, Some(m)) => (m.struct_members, m.row_casters),
-  (Execute, _, _) => {
-   let tokens = quote! {
-   {
-    (|| -> Result<_, _> {
-     let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
-     let mut stmt = db.prepare_cached(#sql)?;
-     stmt.execute(::turbosql::params![#params])
-    })()
-   }
-   };
-
-   if !input.is_empty() {
-    return Err(input.error("Expected parameters or ')'"));
-   }
-
-   // eprintln!("{}", tokens);
-
-   return Ok(tokens);
-  }
-  _ => abort!(span, "Expected explicitly typed return values or a return type."),
- };
+   _ => abort!(span, "Expected explicitly typed return values or a return type."),
+  };
 
  let (result_type, struct_decl, default) = match result_type {
   Some(t) => (quote!(#t), None, Some(quote!(, ..Default::default()))),

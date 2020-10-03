@@ -779,6 +779,7 @@ const FileEntry2: FC<{ item: codegen.RcloneItem }> = ({ item }) => {
       <div className="text-sm leading-5 font-medium text-gray-700">{item.name}</div>
       <div className="text-sm leading-5 text-gray-400 font-thin">
        {item.size && item.size >= 0 && `${prettyBytes(item.size)}, `}
+       {item.dirSize && `${prettyBytes(item.dirSize)}, `}
        {item.modTime &&
         `${DateTime.fromISO(item.modTime).toRelative()} (${DateTime.fromISO(item.modTime).toFormat(
          "MMM d, yyyy"

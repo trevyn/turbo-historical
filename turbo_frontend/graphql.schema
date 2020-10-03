@@ -37,6 +37,7 @@ type RcloneItem {
   mimeType: String
   modTime: String
   isDir: Boolean
+  dirSize: i53
 }
 
 type ResultItem {

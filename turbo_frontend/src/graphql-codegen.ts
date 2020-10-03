@@ -23,6 +23,7 @@ export type RcloneItem = {
   mimeType?: Maybe<Scalars['String']>;
   modTime?: Maybe<Scalars['String']>;
   isDir?: Maybe<Scalars['Boolean']>;
+  dirSize?: Maybe<Scalars['i53']>;
 };
 
 export type ActivityMonitor = {
@@ -143,7 +144,7 @@ export type GetRcloneItemsQuery = (
   { __typename?: 'Query' }
   & { getRcloneItems: Array<(
     { __typename?: 'RcloneItem' }
-    & Pick<RcloneItem, 'id' | 'path' | 'name' | 'size' | 'mimeType' | 'modTime' | 'isDir'>
+    & Pick<RcloneItem, 'id' | 'path' | 'name' | 'size' | 'mimeType' | 'modTime' | 'isDir' | 'dirSize'>
   )> }
 );
 
@@ -336,6 +337,7 @@ export const GetRcloneItemsDocument = gql`
     mimeType
     modTime
     isDir
+    dirSize
   }
 }
     `;

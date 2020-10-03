@@ -175,14 +175,14 @@ struct ResultItem {
  hostaffection: Option<i32>,
 }
 
-#[derive(GraphQLObject, Turbosql, Debug, Default)]
+#[derive(GraphQLObject, Turbosql, Debug, Default, Clone)]
 struct HostAffection {
  #[graphql(skip)]
  rowid: Option<i64>,
  host: Option<String>,
  affection: Option<i32>,
 }
-#[derive(GraphQLObject, Turbosql, Debug, Default)]
+#[derive(GraphQLObject, Turbosql, Debug, Default, Clone)]
 struct Bookmark {
  #[graphql(skip)]
  rowid: Option<i64>,
@@ -216,6 +216,8 @@ struct RcloneItem {
  mime_type: Option<String>,
  mod_time: Option<String>,
  is_dir: Option<bool>,
+ #[turbosql(skip)]
+ dir_size: Option<i53>,
 }
 
 struct Query;
@@ -279,25 +281,8 @@ impl Query {
  }
 
  async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItem>> {
-  let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
-  let items: Vec<RcloneItem> = serde_json::from_str(&contents)?;
-  let path = urlencoding::decode(&path).unwrap();
-
   Ok(
-   items
-    .iter()
-    .filter(|i| match &i.path {
-     None => false,
-     Some(p) => match p.strip_prefix(&path) {
-      None => false,
-      Some(p) => match p.split("/").count() {
-       1 => true,
-       _ => false,
-      },
-     },
-    })
-    .cloned()
-    .collect::<Vec<_>>(),
+   select!(RcloneItem r#"rci1.*,(select sum(size) from rcloneitem rci2 where rci2.path like rci1.path || "/%") AS dir_size from rcloneitem rci1 where path = ? || name"#, path)?,
   )
  }
 }
@@ -442,7 +427,7 @@ impl Mutations {
     ()
    }
    _ => {
-    let host_affection: Vec<HostAffection> = select!(HostAffection "WHERE host = ?", host);
+    let host_affection: Vec<HostAffection> = select!(HostAffection "WHERE host = ?", host)?;
     if host_affection.is_empty() {
      HostAffection { host: Some(host.clone()), affection: Some(affection), ..Default::default() }
       .insert()?;
@@ -460,7 +445,7 @@ impl Mutations {
     execute!("DELETE FROM bookmark WHERE url = ?", url)?;
    }
    true => {
-    let bookmark: Vec<Bookmark> = select!(Bookmark "WHERE url = ?", url);
+    let bookmark: Vec<Bookmark> = select!(Bookmark "WHERE url = ?", url)?;
     if bookmark.is_empty() {
      Bookmark {
       url: Some(url.clone()),
