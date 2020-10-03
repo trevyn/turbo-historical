@@ -16,7 +16,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::task::spawn_blocking;
 use turbosql::{execute, select, Blob, Turbosql};
 use url::Url;
-use warp::http::Method;
+use warp::http::{HeaderMap, Method};
 use warp::Filter;
 
 #[allow(dead_code)]
@@ -585,6 +585,8 @@ async fn main() -> anyhow::Result<()> {
   .allow_headers(vec![header::CONTENT_TYPE, header::AUTHORIZATION])
   .allow_any_origin();
 
+ let filedl = warp::path("filedl").and(warp::header::headers_cloned()).and(warp::path::full());
+
  let api = warp::path("graphql")
   .and(warp::header::exact("authorization", authorization))
   .and(juniper_warp::make_graphql_filter(
@@ -601,7 +603,8 @@ async fn main() -> anyhow::Result<()> {
   // .and(with_sender(listjson_tx))
   // .and_then(listjson_handler)
   //
-  // .or(warp::get().and(warp::path("files").and(warp::path::full()).and_then(files_handler)))
+  .or(filedl.and(warp::get()).and_then(filedl_get_handler))
+  .or(filedl.and(warp::head()).and_then(filedl_head_handler))
   //
   // .or(warp::path!("monolith" / String).and_then(monolith_handler))
   //
@@ -715,18 +718,42 @@ async fn do_scrape(query: &str, agent: &str) -> FieldResult<Vec<ResultItem>> {
  )
 }
 
-async fn files_handler(param: warp::path::FullPath) -> Result<impl warp::Reply, warp::Rejection> {
- log::info!("files_handler {:#?}", param);
+async fn filedl_head_handler(
+ headers: HeaderMap,
+ param: warp::path::FullPath,
+) -> Result<impl warp::Reply, warp::Rejection> {
+ log::info!("filedl_head_handler {:#?} {:#?}", headers, param);
 
- let path = param.as_str().trim_start_matches("/files");
+ // let path = param.as_str().trim_start_matches("/files");
 
- let path = CString::new(path).unwrap();
+ // let path = CString::new(path).unwrap();
 
- spawn_blocking(move || unsafe {
-  GoFetchFiledata(path.as_ptr(), 0, 1500000);
- })
- .await
- .unwrap();
+ // spawn_blocking(move || unsafe {
+ //  GoFetchFiledata(path.as_ptr(), 0, 1500000);
+ // })
+ // .await
+ // .unwrap();
+
+ // pull data from
+
+ Ok("hi")
+}
+
+async fn filedl_get_handler(
+ headers: HeaderMap,
+ param: warp::path::FullPath,
+) -> Result<impl warp::Reply, warp::Rejection> {
+ log::info!("filedl_get_handler {:#?} {:#?}", headers, param);
+
+ // let path = param.as_str().trim_start_matches("/files");
+
+ // let path = CString::new(path).unwrap();
+
+ // spawn_blocking(move || unsafe {
+ //  GoFetchFiledata(path.as_ptr(), 0, 1500000);
+ // })
+ // .await
+ // .unwrap();
 
  // pull data from
 
