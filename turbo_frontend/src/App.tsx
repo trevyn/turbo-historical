@@ -8,6 +8,7 @@ import { DateTime } from "luxon";
 import { Routes, Route, Link, useMatch, useLocation, useNavigate } from "react-router-dom";
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import * as codegen from "./graphql-codegen";
+import ReactPlayer from "react-player";
 
 // if we're at port 3000, assume local dev server, and redirect graphql to port 3020
 const port = window.location.port === "3000" ? "3020" : window.location.port;
@@ -21,7 +22,28 @@ const apollo = new ApolloClient({
 });
 
 const ConstructionComponent: FC = () => {
- return <div>Under ConstructionComponent</div>;
+ return (
+  <div>
+   {/* <ReactPlayer
+    url="http://localhost:3020/filedl/Downloads/video.mkv"
+    controls={true}
+    // playing={true}
+   /> */}
+   <video
+    id="my-video"
+    className="video-js"
+    controls
+    preload="auto"
+    width="640"
+    height="264"
+    poster="MY_VIDEO_POSTER.jpg"
+    data-setup="{}"
+   >
+    {/* <source src="MY_VIDEO.mp4" type="video/mp4" /> */}
+    <source src="http://localhost:3020/filedl/Downloads/video.mkv" type="video/webm" />
+   </video>
+  </div>
+ );
 };
 
 interface NavItem {

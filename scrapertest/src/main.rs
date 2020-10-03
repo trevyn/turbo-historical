@@ -6,11 +6,11 @@ use once_cell::sync::Lazy;
 use reqwest::header;
 use scraper::{Html, Selector};
 use serde::Deserialize;
-use std::convert::Infallible;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_longlong, c_uchar};
 use std::sync::Mutex;
 use std::time::SystemTime;
+use std::{convert::Infallible, io::Read};
 use sysinfo::SystemExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::spawn_blocking;
@@ -745,6 +745,19 @@ async fn filedl_get_handler(
 ) -> Result<impl warp::Reply, warp::Rejection> {
  log::info!("filedl_get_handler {:#?} {:#?}", headers, param);
 
+ let mut f =
+  std::fs::File::open("/Users/eden/Downloads/Patrick McGoohan Interview - Unreleased.mkv").unwrap();
+ // let mut buffer = [0; 10];
+
+ // // read up to 10 bytes
+ // f.read(&mut buffer)?;
+
+ let mut buffer = Vec::new();
+ // read the whole file
+ f.read_to_end(&mut buffer).unwrap();
+
+ eprintln!("buffer is {:#?}", buffer.len());
+
  // let path = param.as_str().trim_start_matches("/files");
 
  // let path = CString::new(path).unwrap();
@@ -756,8 +769,16 @@ async fn filedl_get_handler(
  // .unwrap();
 
  // pull data from
+ // Ok(warp::reply::with_header(buffer, "content-type", "video/webm"))
 
- Ok("hi")
+ Ok(
+  warp::http::Response::builder()
+   .header("Content-Type", "video/webm")
+   .header("Accept-Ranges", "bytes")
+   .body(buffer),
+ )
+
+ // Ok(buffer)
 }
 
 // async fn monolith_handler(param: String) -> Result<impl warp::Reply, warp::Rejection> {
