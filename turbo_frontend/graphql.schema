@@ -11,7 +11,7 @@ type ActivityMonitor {
   usedSwap: Int!
 }
 
-type BookmarkQueryResult {
+type BookmarkQueryResultItem {
   bookmarkTimestamp: Float!
   title: String!
   snippet: String!
@@ -32,7 +32,7 @@ type Mutations {
 }
 
 type Query {
-  getBookmarks: [BookmarkQueryResult!]!
+  getBookmarks: [BookmarkQueryResultItem!]!
   search(query: String!, forceScrape: Boolean!): [SearchQueryResultItem!]!
   getActivityMonitor: ActivityMonitor!
   getCommitHash: String!

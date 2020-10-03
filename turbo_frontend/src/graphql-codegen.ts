@@ -35,17 +35,6 @@ export type ActivityMonitor = {
   usedSwap: Scalars['Int'];
 };
 
-export type BookmarkQueryResult = {
-  __typename?: 'BookmarkQueryResult';
-  bookmarkTimestamp: Scalars['Float'];
-  title: Scalars['String'];
-  snippet: Scalars['String'];
-  url: Scalars['String'];
-  host: Scalars['String'];
-  bookmarked: Scalars['Boolean'];
-  hostaffection: Scalars['Int'];
-};
-
 export type SearchQueryResultItem = {
   __typename?: 'SearchQueryResultItem';
   searchHighlightedUrl: Scalars['String'];
@@ -60,7 +49,7 @@ export type SearchQueryResultItem = {
 
 export type Query = {
   __typename?: 'Query';
-  getBookmarks: Array<BookmarkQueryResult>;
+  getBookmarks: Array<BookmarkQueryResultItem>;
   search: Array<SearchQueryResultItem>;
   getActivityMonitor: ActivityMonitor;
   getCommitHash: Scalars['String'];
@@ -97,14 +86,25 @@ export type MutationsSetBookmarkedArgs = {
 };
 
 
+export type BookmarkQueryResultItem = {
+  __typename?: 'BookmarkQueryResultItem';
+  bookmarkTimestamp: Scalars['Float'];
+  title: Scalars['String'];
+  snippet: Scalars['String'];
+  url: Scalars['String'];
+  host: Scalars['String'];
+  bookmarked: Scalars['Boolean'];
+  hostaffection: Scalars['Int'];
+};
+
 export type GetBookmarksQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GetBookmarksQuery = (
   { __typename?: 'Query' }
   & { getBookmarks: Array<(
-    { __typename?: 'BookmarkQueryResult' }
-    & Pick<BookmarkQueryResult, 'bookmarkTimestamp' | 'title' | 'snippet' | 'url' | 'host' | 'bookmarked' | 'hostaffection'>
+    { __typename?: 'BookmarkQueryResultItem' }
+    & Pick<BookmarkQueryResultItem, 'bookmarkTimestamp' | 'title' | 'snippet' | 'url' | 'host' | 'bookmarked' | 'hostaffection'>
   )> }
 );
 

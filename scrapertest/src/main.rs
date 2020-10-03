@@ -178,7 +178,7 @@ struct SearchQueryResultItem {
 }
 
 #[derive(GraphQLObject, Clone, Debug)]
-struct BookmarkQueryResult {
+struct BookmarkQueryResultItem {
  bookmark_timestamp: f64,
  title: String,
  snippet: String,
@@ -237,8 +237,8 @@ struct Query;
 
 #[graphql_object]
 impl Query {
- async fn get_bookmarks() -> FieldResult<Vec<BookmarkQueryResult>> {
-  Ok(select!(BookmarkQueryResult r#"
+ async fn get_bookmarks() -> FieldResult<Vec<BookmarkQueryResultItem>> {
+  Ok(select!(BookmarkQueryResultItem r#"
    url,
    title,
    host,

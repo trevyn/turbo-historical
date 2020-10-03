@@ -404,7 +404,7 @@ const SearchComponent: FC = () => {
 };
 
 const ResultsComponent: FC<{
- results: (codegen.SearchQueryResultItem | codegen.BookmarkQueryResult)[];
+ results: (codegen.SearchQueryResultItem | codegen.BookmarkQueryResultItem)[];
 }> = ({ results }) => {
  const [setHostAffectionMutation] = codegen.useSetHostAffectionMutation();
  const [setBookmarkedMutation] = codegen.useSetBookmarkedMutation();
