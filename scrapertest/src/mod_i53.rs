@@ -17,7 +17,7 @@ impl std::fmt::Display for i53 {
  }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub struct i53(ux_i53);
 

@@ -14,18 +14,6 @@ export type Scalars = {
   i53: number;
 };
 
-export type RcloneItem = {
-  __typename?: 'RcloneItem';
-  id?: Maybe<Scalars['String']>;
-  path?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  size?: Maybe<Scalars['i53']>;
-  mimeType?: Maybe<Scalars['String']>;
-  modTime?: Maybe<Scalars['String']>;
-  isDir?: Maybe<Scalars['Boolean']>;
-  dirSize?: Maybe<Scalars['i53']>;
-};
-
 export type ActivityMonitor = {
   __typename?: 'ActivityMonitor';
   totalMemory: Scalars['Int'];
@@ -33,6 +21,17 @@ export type ActivityMonitor = {
   availableMemory: Scalars['Int'];
   totalSwap: Scalars['Int'];
   usedSwap: Scalars['Int'];
+};
+
+export type RcloneItemQueryResultItem = {
+  __typename?: 'RcloneItemQueryResultItem';
+  path: Scalars['String'];
+  name: Scalars['String'];
+  size: Scalars['i53'];
+  mimeType: Scalars['String'];
+  modTime: Scalars['String'];
+  isDir: Scalars['Boolean'];
+  dirSize?: Maybe<Scalars['i53']>;
 };
 
 export type SearchQueryResultItem = {
@@ -53,7 +52,7 @@ export type Query = {
   search: Array<SearchQueryResultItem>;
   getActivityMonitor: ActivityMonitor;
   getCommitHash: Scalars['String'];
-  getRcloneItems: Array<RcloneItem>;
+  getRcloneItems: Array<RcloneItemQueryResultItem>;
 };
 
 
@@ -149,8 +148,8 @@ export type GetRcloneItemsQueryVariables = Exact<{
 export type GetRcloneItemsQuery = (
   { __typename?: 'Query' }
   & { getRcloneItems: Array<(
-    { __typename?: 'RcloneItem' }
-    & Pick<RcloneItem, 'id' | 'path' | 'name' | 'size' | 'mimeType' | 'modTime' | 'isDir' | 'dirSize'>
+    { __typename?: 'RcloneItemQueryResultItem' }
+    & Pick<RcloneItemQueryResultItem, 'path' | 'name' | 'size' | 'mimeType' | 'modTime' | 'isDir' | 'dirSize'>
   )> }
 );
 
@@ -325,7 +324,6 @@ export type GetCommitHashQueryResult = Apollo.QueryResult<GetCommitHashQuery, Ge
 export const GetRcloneItemsDocument = gql`
     query getRcloneItems($path: String!) {
   getRcloneItems(path: $path) {
-    id
     path
     name
     size

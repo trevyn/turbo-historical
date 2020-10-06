@@ -758,7 +758,7 @@ const FilesComponent: FC = () => {
       <div className="shadow overflow-hidden border-b border-t border-gray-200 sm:rounded-lg">
        <table className=" divide-y divide-gray-200">
         <tbody className="bg-white divide-y divide-gray-200">
-         {data.getRcloneItems.map((item: codegen.RcloneItem) => (
+         {data.getRcloneItems.map((item: codegen.RcloneItemQueryResultItem) => (
           <FileEntry2 item={item} />
          ))}
         </tbody>
@@ -773,7 +773,7 @@ const FilesComponent: FC = () => {
  );
 };
 
-const FileEntry2: FC<{ item: codegen.RcloneItem }> = ({ item }) => {
+const FileEntry2: FC<{ item: codegen.RcloneItemQueryResultItem }> = ({ item }) => {
  let navigate = useNavigate();
 
  return (

@@ -36,17 +36,16 @@ type Query {
   search(query: String!, forceScrape: Boolean!): [SearchQueryResultItem!]!
   getActivityMonitor: ActivityMonitor!
   getCommitHash: String!
-  getRcloneItems(path: String!): [RcloneItem!]!
+  getRcloneItems(path: String!): [RcloneItemQueryResultItem!]!
 }
 
-type RcloneItem {
-  id: String
-  path: String
-  name: String
-  size: i53
-  mimeType: String
-  modTime: String
-  isDir: Boolean
+type RcloneItemQueryResultItem {
+  path: String!
+  name: String!
+  size: i53!
+  mimeType: String!
+  modTime: String!
+  isDir: Boolean!
   dirSize: i53
 }
 

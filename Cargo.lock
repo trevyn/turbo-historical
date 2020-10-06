@@ -2176,7 +2176,9 @@ name = "scrapertest"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "clap 3.0.0-beta.2",
+ "futures",
  "juniper",
  "juniper_warp",
  "log",
@@ -2190,6 +2192,7 @@ dependencies = [
  "serde_json",
  "sysinfo",
  "tokio",
+ "tokio-util",
  "turbosql",
  "url",
  "urlencoding",

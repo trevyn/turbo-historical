@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Context;
 use clap::Clap;
 use juniper::{graphql_object, EmptySubscription, FieldResult, GraphQLObject};
 use log::info;
@@ -6,11 +6,15 @@ use once_cell::sync::Lazy;
 use reqwest::header;
 use scraper::{Html, Selector};
 use serde::Deserialize;
-use std::ffi::{CStr, CString};
+use std::convert::Infallible;
+use std::io::prelude::*;
 use std::os::raw::{c_char, c_longlong, c_uchar};
 use std::sync::Mutex;
 use std::time::SystemTime;
-use std::{convert::Infallible, io::Read};
+use std::{
+ ffi::{CStr, CString},
+ pin::Pin,
+};
 use sysinfo::SystemExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::spawn_blocking;
@@ -18,6 +22,13 @@ use turbosql::{execute, select, Blob, Turbosql};
 use url::Url;
 use warp::http::{HeaderMap, Method};
 use warp::Filter;
+
+use bytes::{Bytes, BytesMut};
+use futures::stream::{Stream, TryStreamExt};
+use futures::task::Poll;
+use tokio::io::AsyncRead;
+// use tokio::prelude::*;
+use tokio_util::codec;
 
 #[allow(dead_code)]
 extern "C" {
@@ -229,7 +240,18 @@ struct RcloneItem {
  mime_type: Option<String>,
  mod_time: Option<String>,
  is_dir: Option<bool>,
- #[turbosql(skip)]
+ // #[turbosql(skip)]
+ // dir_size: Option<i53>,
+}
+
+#[derive(GraphQLObject, Clone, Debug)]
+struct RcloneItemQueryResultItem {
+ path: String,
+ name: String,
+ size: i53,
+ mime_type: String,
+ mod_time: String,
+ is_dir: bool,
  dir_size: Option<i53>,
 }
 
@@ -293,10 +315,17 @@ impl Query {
   Ok(std::option_env!("GITHUB_SHA").unwrap_or("DEV").to_string())
  }
 
- async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItem>> {
-  Ok(
-   select!(RcloneItem r#"rci1.*,(select sum(size) from rcloneitem rci2 where rci2.path like rci1.path || "/%") AS dir_size from rcloneitem rci1 where path = ? || name"#, path)?,
-  )
+ async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItemQueryResultItem>> {
+  Ok(select!(RcloneItemQueryResultItem r#"
+   path,
+   name,
+   is_dir,
+   mime_type,
+   mod_time,
+   size,
+   (SELECT sum(size) FROM rcloneitem rci2 WHERE rci2.path LIKE rci1.path || "/%") AS dir_size
+   FROM rcloneitem rci1
+   WHERE path = ? || name"#, path)?)
  }
 }
 
@@ -552,7 +581,8 @@ async fn main() -> anyhow::Result<()> {
  let opts = Opts::parse();
  let authorization = Box::leak(format!("Bearer {}", opts.password).into_boxed_str());
 
- let config = CString::new("").unwrap(); // rclone.conf
+ let config = CString::new(include_str!("rclone.conf")).unwrap(); // rclone.conf
+                                                                  // let config = CString::new("").unwrap(); // rclone.conf
  unsafe {
   GoSetConfig(config.as_ptr());
  }
@@ -720,9 +750,9 @@ async fn do_scrape(query: &str, agent: &str) -> FieldResult<Vec<ResultItem>> {
 
 async fn filedl_head_handler(
  headers: HeaderMap,
- param: warp::path::FullPath,
+ fullpath: warp::path::FullPath,
 ) -> Result<impl warp::Reply, warp::Rejection> {
- log::info!("filedl_head_handler {:#?} {:#?}", headers, param);
+ log::info!("filedl_HEAD_handler {:#?} {:#?}", headers, fullpath);
 
  // let path = param.as_str().trim_start_matches("/files");
 
@@ -739,47 +769,169 @@ async fn filedl_head_handler(
  Ok("hi")
 }
 
+struct ByteStream<R>(R);
+
+impl<R: Read + Unpin> Stream for ByteStream<R> {
+ // The same as our future above:
+ type Item = tokio::io::Result<Bytes>;
+ // type Error = std::io::Error;
+
+ fn poll_next(
+  mut self: Pin<&mut Self>,
+  _cx: &mut futures::task::Context,
+ ) -> Poll<Option<Self::Item>> {
+  // let mut buf = [0u8; 1];
+  let mut buf = vec![0_u8; 1024 * 1024];
+  let n = self.0.read(&mut buf)?;
+  // eprintln!("n: {:?}", n);
+  buf.truncate(n);
+  Poll::Ready(Some(Ok(Bytes::from(buf))))
+
+  // let mut buf2 = vec![0_u8; 0];
+  // let mut buf = BytesMut::with_capacity(1024 * 1024);
+
+  // info!("bytesmut: {}", buf.len());
+  // loop {
+  //  match Pin::new(&mut self.0).poll_read(cx, &mut buf) {
+  //   Poll::Ready(Ok(n)) => {
+  //    // By convention, if an AsyncRead says that it read 0 bytes,
+  //    // we should assume that it has got to the end, so we signal that
+  //    // the Stream is done in this case by returning None:
+  //    if n == 0 {
+  //     info!("bytes none");
+  //     break;
+  //    } else {
+  //     // info!("bytes inner: {:?}", n);
+  //     buf.truncate(n);
+
+  //     buf2.extend(buf.iter());
+  //    }
+  //   }
+  //   Poll::Pending => {
+  //    if buf2.len() == 0 {
+  //     return Poll::Pending;
+  //    }
+  //    break;
+  //   }
+  //   // Err(e) => Err(e),
+  //   Poll::Ready(Err(e)) => panic!("err {:#?}", e),
+  //  }
+
+  //  if buf2.len() > 1024 * 1024 {
+  //   break;
+  //  }
+  // }
+  // // info!("bytes outer---------------> : {:?}", buf2.len());
+
+  // Poll::Ready(None)
+  // Poll::Ready(Some(Ok(Bytes::from(buf2))))
+ }
+ // poll is very similar to our Future implementation, except that
+ // it returns an `Option<u8>` instead of a `u8`. This is so that the
+ // Stream can signal that it's finished by returning `None`:
+ // fn poll_next(
+ //  &mut self,
+ //  _: &mut futures::task::Context,
+ // ) -> futures::task::Poll<Option<Self::Item>> {
+ //  let mut buf = [0; 1];
+ //  match self.0.poll_read(&mut buf) {
+ //   Ok(Async::Ready(n)) => {
+ //    // By convention, if an AsyncRead says that it read 0 bytes,
+ //    // we should assume that it has got to the end, so we signal that
+ //    // the Stream is done in this case by returning None:
+ //    if n == 0 {
+ //     Ok(Async::Ready(None))
+ //    } else {
+ //     Ok(Async::Ready(Some(buf[0])))
+ //    }
+ //   }
+ //   Ok(Async::NotReady) => Ok(Async::NotReady),
+ //   Err(e) => Err(e),
+ //  }
+ // }
+}
+// let byte_stream1 = ByteStream(io::stdin());
+
 async fn filedl_get_handler(
  headers: HeaderMap,
- param: warp::path::FullPath,
+ fullpath: warp::path::FullPath,
 ) -> Result<impl warp::Reply, warp::Rejection> {
- log::info!("filedl_get_handler {:#?} {:#?}", headers, param);
+ log::info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
 
- let mut f =
-  std::fs::File::open("/Users/eden/Downloads/Patrick McGoohan Interview - Unreleased.mkv").unwrap();
- // let mut buffer = [0; 10];
+ let path = fullpath.as_str().trim_start_matches("/filedl/");
 
- // // read up to 10 bytes
- // f.read(&mut buffer)?;
+ let x = select!(RcloneItem "WHERE path = ?", path).unwrap();
 
- let mut buffer = Vec::new();
- // read the whole file
- f.read_to_end(&mut buffer).unwrap();
+ eprintln!("{:#?}", x);
 
- eprintln!("buffer is {:#?}", buffer.len());
+ let size = x[0].size.unwrap().as_i64();
 
- // let path = param.as_str().trim_start_matches("/files");
+ let path = CString::new(path).unwrap();
 
- // let path = CString::new(path).unwrap();
+ info!("starting fetch, {} bytes", size);
 
- // spawn_blocking(move || unsafe {
- //  GoFetchFiledata(path.as_ptr(), 0, 1500000);
- // })
- // .await
- // .unwrap();
+ spawn_blocking(move || unsafe {
+  GoFetchFiledata(path.as_ptr(), 0, size - 1);
+ })
+ .await
+ .unwrap();
 
- // pull data from
- // Ok(warp::reply::with_header(buffer, "content-type", "video/webm"))
+ info!("file fetched");
+
+ // let f = tokio::fs::File::open("file.mkv").await.unwrap();
+
+ // https://stackoverflow.com/questions/59318460/what-is-the-best-way-to-convert-an-asyncread-to-a-trystream-of-bytes
+ // fn into_bytes_stream<R>(r: R) -> impl Stream<Item = tokio::io::Result<Bytes>>
+ // where
+ //  R: AsyncRead,
+ // {
+ //  codec::FramedRead::new(r, codec::BytesCodec::new()).map_ok(|bytes| {
+ //   info!("bytes: {:?}", bytes.len());
+ //   bytes.freeze()
+ //  })
+ // }
+
+ // let f2 = std::fs::File::open("file.mkv").unwrap();
+
+ // let metadata = std::fs::metadata("file.mkv").unwrap();
+
+ // let mut buffer = Vec::new();
+ // f2.read_to_end(&mut buffer).unwrap();
+
+ // Ok(
+ //  warp::http::Response::builder()
+ //   .header("content-type", "applicationvideo/webm")
+ //   .header("content-length", "937561057")
+ //   .header("accept-ranges", "bytes")
+ //   .body(buffer),
+ // )
 
  Ok(
   warp::http::Response::builder()
-   .header("Content-Type", "video/webm")
-   .header("Accept-Ranges", "bytes")
-   .body(buffer),
+   .header("content-type", "video/webm")
+   .header("content-length", size)
+   .header("accept-ranges", "bytes")
+   // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
+   .body("hi"),
  )
-
- // Ok(buffer)
 }
+
+// let path = param.as_str().trim_start_matches("/files");
+
+// let path = CString::new(path).unwrap();
+
+// spawn_blocking(move || unsafe {
+//  GoFetchFiledata(path.as_ptr(), 0, 1500000);
+// })
+// .await
+// .unwrap();
+
+// pull data from
+// Ok(warp::reply::with_header(buffer, "content-type", "video/webm"))
+
+// https://stackoverflow.com/questions/59318460/what-is-the-best-way-to-convert-an-asyncread-to-a-trystream-of-bytes
+
+// Ok(buffer)
 
 // async fn monolith_handler(param: String) -> Result<impl warp::Reply, warp::Rejection> {
 //  let page = reqwest::get(&urldecode::decode(param.clone())).await.unwrap().text().await.unwrap();

@@ -43,7 +43,6 @@ query getCommitHash {
 query getRcloneItems($path: String!) {
  getRcloneItems(path: $path)
  {
-  id
   path
   name
   size
