@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::Clap;
 use juniper::{graphql_object, EmptySubscription, FieldResult, GraphQLObject};
-use log::info;
+use log::{error, info};
 use once_cell::sync::Lazy;
 use reqwest::header;
 use scraper::{Html, Selector};
@@ -96,9 +96,9 @@ extern "C" fn rust_insert_files_from_go(json: *const c_char) {
  });
 }
 
-#[derive(Turbosql, Deserialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-struct Filecache {
+#[derive(Turbosql, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "PascalCase")]
+struct FileCache {
  #[serde(skip)]
  rowid: Option<i64>,
  cachekey: Option<String>,
@@ -128,7 +128,9 @@ extern "C" fn rust_insert_filecache_from_go(
 
  log::info!("rust_insert_filecache_from_go: {:#?}", str);
 
- let mut fc: Filecache = serde_json::from_str(str).unwrap();
+ let mut fc: FileCache = serde_json::from_str(str).unwrap();
+
+ log::info!("rust_insert_filecache_from_go fc: {:#?}", fc);
 
  let slice = unsafe { std::slice::from_raw_parts(buf, len as usize) };
  fc.bytes = Some(slice.to_vec());
@@ -504,6 +506,43 @@ impl Mutations {
 
 type Schema = juniper::RootNode<'static, Query, Mutations, EmptySubscription>;
 
+#[derive(Debug)]
+struct CustomReject;
+impl warp::reject::Reject for CustomReject {}
+
+fn anyhow_to_warp_rejection(err: anyhow::Error) -> warp::Rejection {
+ error!("internal error occurred: {:#}", err);
+ warp::reject::custom(CustomReject)
+}
+
+// fn anyhow_to_warp_rejection<E: Into<anyhow::Error>>(err: E) -> warp::Rejection {
+//  error!("internal error occurred: {:#}", err.into());
+//  warp::reject::custom(CustomReject)
+// }
+
+// fn pack(err: anyhow::Error) -> Problem {
+//  let err = match err.downcast::<Problem>() {
+//   Ok(problem) => return problem,
+
+//   Err(err) => err,
+//  };
+
+//  // if let Some(err) = err.downcast_ref::<auth::AuthError>() {
+//  //  match err {
+//  //   auth::AuthError::InvalidCredentials => {
+//  //    return Problem::new("Invalid credentials.")
+//  //     .set_status(StatusCode::BAD_REQUEST)
+//  //     .set_detail("The passed credentials were invalid.")
+//  //   }
+
+//  //   auth::AuthError::ArgonError => (),
+//  //  }
+//  // }
+
+//  error!("internal error occurred: {:#}", err);
+//  Problem::with_title_and_type_from_status(StatusCode::INTERNAL_SERVER_ERROR)
+// }
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
  std::env::set_var("RUST_LOG", "info");
@@ -856,65 +895,76 @@ async fn filedl_get_handler(
  headers: HeaderMap,
  fullpath: warp::path::FullPath,
 ) -> Result<impl warp::Reply, warp::Rejection> {
- log::info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
+ match async {
+  info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
 
- let path = fullpath.as_str().trim_start_matches("/filedl/");
+  let path = fullpath.as_str().trim_start_matches("/filedl/");
 
- let x = select!(RcloneItem "WHERE path = ?", path).unwrap();
+  let x = select!(RcloneItem "WHERE path = ?", path)?;
 
- eprintln!("{:#?}", x);
+  eprintln!("{:#?}", x);
 
- let size = x[0].size.unwrap().as_i64();
+  let size = x[0].size.unwrap().as_i64();
 
- let path = CString::new(path).unwrap();
+  let path_cstr = CString::new(path)?;
 
- info!("starting fetch, {} bytes", size);
+  info!("starting fetch, {} bytes", size);
 
- spawn_blocking(move || unsafe {
-  GoFetchFiledata(path.as_ptr(), 0, size - 1);
- })
+  spawn_blocking(move || unsafe {
+   GoFetchFiledata(path_cstr.as_ptr(), 0, size - 1);
+  })
+  .await?;
+
+  info!("file fetched");
+
+  let fc = select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?", path, 0, size-1)?;
+
+  eprintln!("{:#?}, {:#?}, {:#?}", fc[0].cachekey, fc[0].startbytepos, fc[0].endbytepos);
+
+  Ok(
+   warp::http::Response::builder()
+    // .header("content-type", "video/webm")
+    .header("content-type", "image/png")
+    .header("content-length", size)
+    .header("accept-ranges", "bytes")
+    // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
+    .body(fc[0].bytes.clone().context("bytes")?),
+  )
+ }
  .await
- .unwrap();
-
- info!("file fetched");
-
- // let f = tokio::fs::File::open("file.mkv").await.unwrap();
-
- // https://stackoverflow.com/questions/59318460/what-is-the-best-way-to-convert-an-asyncread-to-a-trystream-of-bytes
- // fn into_bytes_stream<R>(r: R) -> impl Stream<Item = tokio::io::Result<Bytes>>
- // where
- //  R: AsyncRead,
- // {
- //  codec::FramedRead::new(r, codec::BytesCodec::new()).map_ok(|bytes| {
- //   info!("bytes: {:?}", bytes.len());
- //   bytes.freeze()
- //  })
- // }
-
- // let f2 = std::fs::File::open("file.mkv").unwrap();
-
- // let metadata = std::fs::metadata("file.mkv").unwrap();
-
- // let mut buffer = Vec::new();
- // f2.read_to_end(&mut buffer).unwrap();
-
- // Ok(
- //  warp::http::Response::builder()
- //   .header("content-type", "applicationvideo/webm")
- //   .header("content-length", "937561057")
- //   .header("accept-ranges", "bytes")
- //   .body(buffer),
- // )
-
- Ok(
-  warp::http::Response::builder()
-   .header("content-type", "video/webm")
-   .header("content-length", size)
-   .header("accept-ranges", "bytes")
-   // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
-   .body("hi"),
- )
+ {
+  Ok(response) => Ok(response),
+  Err(e) => Err(anyhow_to_warp_rejection(e)),
+ }
 }
+
+// let f = tokio::fs::File::open("file.mkv").await.unwrap();
+
+// https://stackoverflow.com/questions/59318460/what-is-the-best-way-to-convert-an-asyncread-to-a-trystream-of-bytes
+// fn into_bytes_stream<R>(r: R) -> impl Stream<Item = tokio::io::Result<Bytes>>
+// where
+//  R: AsyncRead,
+// {
+//  codec::FramedRead::new(r, codec::BytesCodec::new()).map_ok(|bytes| {
+//   info!("bytes: {:?}", bytes.len());
+//   bytes.freeze()
+//  })
+// }
+
+// let f2 = std::fs::File::open("file.mkv").unwrap();
+
+// let metadata = std::fs::metadata("file.mkv").unwrap();
+
+// let mut buffer = Vec::new();
+// f2.read_to_end(&mut buffer).unwrap();
+
+// Ok(
+//  warp::http::Response::builder()
+//   .header("content-type", "applicationvideo/webm")
+//   .header("content-length", "937561057")
+//   .header("accept-ranges", "bytes")
+//   .body(buffer),
+// )
 
 // let path = param.as_str().trim_start_matches("/files");
 
