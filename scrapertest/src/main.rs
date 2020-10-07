@@ -900,24 +900,25 @@ async fn filedl_get_handler(
 
   let path = fullpath.as_str().trim_start_matches("/filedl/");
 
-  let x = select!(RcloneItem "WHERE path = ?", path)?;
+  let size = select!(RcloneItem "WHERE path = ?", path)?[0].size.unwrap().as_i64();
 
-  eprintln!("{:#?}", x);
+  let fc = select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
+  path, 0, size - 1)?;
 
-  let size = x[0].size.unwrap().as_i64();
-
-  let path_cstr = CString::new(path)?;
-
-  info!("starting fetch, {} bytes", size);
-
-  spawn_blocking(move || unsafe {
-   GoFetchFiledata(path_cstr.as_ptr(), 0, size - 1);
-  })
-  .await?;
-
-  info!("file fetched");
-
-  let fc = select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?", path, 0, size-1)?;
+  let fc = match fc.len() {
+   0 => {
+    let path_cstr = CString::new(path)?;
+    info!("starting fetch, {} bytes", size);
+    spawn_blocking(move || unsafe {
+     GoFetchFiledata(path_cstr.as_ptr(), 0, size - 1);
+    })
+    .await?;
+    info!("file fetched");
+    select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
+    path, 0, size - 1)?
+   }
+   _ => fc,
+  };
 
   eprintln!("{:#?}, {:#?}, {:#?}", fc[0].cachekey, fc[0].startbytepos, fc[0].endbytepos);
 
