@@ -900,7 +900,9 @@ async fn filedl_get_handler(
 
   let path = fullpath.as_str().trim_start_matches("/filedl/");
 
-  let size = select!(RcloneItem "WHERE path = ?", path)?[0].size.unwrap().as_i64();
+  let rcloneitem = select!(RcloneItem "WHERE path = ?", path)?;
+  let rcloneitem = rcloneitem[0].clone();
+  let size = rcloneitem.size.unwrap().as_i64();
 
   let fc = select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
   path, 0, size - 1)?;
@@ -920,12 +922,12 @@ async fn filedl_get_handler(
    _ => fc,
   };
 
-  eprintln!("{:#?}, {:#?}, {:#?}", fc[0].cachekey, fc[0].startbytepos, fc[0].endbytepos);
+  info!("{:#?}", rcloneitem.mime_type);
 
   Ok(
    warp::http::Response::builder()
     // .header("content-type", "video/webm")
-    .header("content-type", "image/png")
+    .header("content-type", rcloneitem.mime_type.context("mime_type")?)
     .header("content-length", size)
     .header("accept-ranges", "bytes")
     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
