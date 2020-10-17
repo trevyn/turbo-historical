@@ -247,8 +247,8 @@ fn migrations_to_schema(migrations: &Vec<String>) -> String {
 }
 
 fn read_migrations_toml() -> MigrationsToml {
- let flock = std::fs::File::create(std::env::temp_dir().join("migrations.toml.lock")).unwrap();
- fs2::FileExt::lock_exclusive(&flock).unwrap();
+ let lockfile = std::fs::File::create(std::env::temp_dir().join("migrations.toml.lock")).unwrap();
+ fs2::FileExt::lock_exclusive(&lockfile).unwrap();
 
  let migrations_toml_path = std::env::current_dir().unwrap().join(MIGRATIONS_FILENAME);
  let migrations_toml_path_lossy = migrations_toml_path.to_string_lossy();
