@@ -21,12 +21,10 @@ pub(super) fn create(table: &Table) -> proc_macro2::TokenStream {
 
  // read in the existing migrations from toml
 
- let flock =
-  std::fs::File::create(std::env::current_dir().unwrap().join(".migrations.toml.lock")).unwrap();
+ let flock = std::fs::File::create(std::env::temp_dir().join("migrations.toml.lock")).unwrap();
  fs2::FileExt::lock_exclusive(&flock).unwrap();
 
- let mut migrations_toml_path = std::env::current_dir().unwrap();
- migrations_toml_path.push(MIGRATIONS_FILENAME);
+ let migrations_toml_path = std::env::current_dir().unwrap().join(MIGRATIONS_FILENAME);
  let migrations_toml_path_lossy = migrations_toml_path.to_string_lossy();
 
  let source_migrations_toml = match migrations_toml_path.exists() {

@@ -233,7 +233,7 @@ fn migrations_to_tempdb(migrations: &Vec<String>) -> Connection {
 }
 
 fn migrations_to_schema(migrations: &Vec<String>) -> String {
- let schema = migrations_to_tempdb(migrations)
+ migrations_to_tempdb(migrations)
   .prepare("SELECT sql FROM sqlite_master WHERE type='table' ORDER BY sql")
   .unwrap()
   .query_map(rusqlite::params![], |row| {
@@ -243,19 +243,14 @@ fn migrations_to_schema(migrations: &Vec<String>) -> String {
   .unwrap()
   .map(|x| x.unwrap())
   .collect::<Vec<_>>()
-  .join("\n");
-
- schema
+  .join("\n")
 }
 
 fn read_migrations_toml() -> MigrationsToml {
- let dir = std::env::current_dir().unwrap();
-
- let flock = std::fs::File::create(dir.join(".migrations.toml.lock")).unwrap();
+ let flock = std::fs::File::create(std::env::temp_dir().join("migrations.toml.lock")).unwrap();
  fs2::FileExt::lock_exclusive(&flock).unwrap();
 
- let mut migrations_toml_path = dir;
- migrations_toml_path.push(MIGRATIONS_FILENAME);
+ let migrations_toml_path = std::env::current_dir().unwrap().join(MIGRATIONS_FILENAME);
  let migrations_toml_path_lossy = migrations_toml_path.to_string_lossy();
 
  match migrations_toml_path.exists() {

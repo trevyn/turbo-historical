@@ -21,4 +21,3 @@
 /.cargo/config.toml
 
 **/flamegraph.svg
-**/.migrations.toml.lock
