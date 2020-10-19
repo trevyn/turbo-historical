@@ -22,7 +22,6 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
 
  quote! {
   pub fn select_all() -> Vec<#table> {
-   // #table::__turbosql_ensure_table_created();
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
    let mut stmt = db.prepare_cached(#sql).unwrap();
 
@@ -41,8 +40,6 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
   P: IntoIterator,
   P::Item: ::turbosql::ToSql,
   {
-   // #table::__turbosql_ensure_table_created();
-
    let sql = format!("{} WHERE {}", #sql, where_clause);
 
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
@@ -63,8 +60,6 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
   P: IntoIterator,
   P::Item: ::turbosql::ToSql,
   {
-   // #table::__turbosql_ensure_table_created();
-
    let db = ::turbosql::__TURBOSQL_DB.lock().unwrap();
    let mut stmt = db.prepare_cached(&sql).unwrap();
 
@@ -83,8 +78,6 @@ pub(super) fn select(table: &Table) -> proc_macro2::TokenStream {
   P: IntoIterator,
   P::Item: ::turbosql::ToSql,
   {
-   // #table::__turbosql_ensure_table_created();
-
    let sql = format!("{} WHERE {} LIMIT 1", #sql, where_clause);
    // trace!("{}", sql);
 

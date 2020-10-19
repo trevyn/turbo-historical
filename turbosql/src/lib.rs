@@ -111,19 +111,6 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
  )
  .expect("rusqlite::Connection::open_with_flags");
 
- conn
-  .execute_batch(
-   r"
-    PRAGMA auto_vacuum=INCREMENTAL;
-    PRAGMA journal_mode=WAL;
-    PRAGMA wal_autocheckpoint=8000;
-    PRAGMA synchronous=NORMAL;
-   ",
-  )
-  .expect("Setting database PRAGMAs");
-
- // eprintln!(include_str!("../../migrations.toml"));
-
  let result = conn.query_row(
   "SELECT sql FROM sqlite_master WHERE name = ?",
   params!["turbosql_migrations"],
@@ -135,29 +122,51 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
 
  match result {
   Err(rusqlite::Error::QueryReturnedNoRows) => {
-   // no table yet, create
+   // no migrations table exists yet, create
    conn
     .execute_batch(
-     r"
+     r#"
+      PRAGMA auto_vacuum=INCREMENTAL;
+      PRAGMA journal_mode=WAL;
+      PRAGMA wal_autocheckpoint=8000;
+      PRAGMA synchronous=NORMAL;
+
       CREATE TABLE turbosql_migrations (
        rowid INTEGER PRIMARY KEY,
        migration TEXT NOT NULL
       );
-     ",
+
+      INSERT INTO turbosql_migrations(migration)
+       VALUES (
+        "PRAGMA auto_vacuum=INCREMENTAL",
+        "PRAGMA journal_mode=WAL",
+        "PRAGMA wal_autocheckpoint=8000",
+        "PRAGMA synchronous=NORMAL",
+       );
+     "#,
     )
     .expect("CREATE TABLE turbosql_migrations");
   }
   Err(err) => {
    panic!(err);
   }
-  Ok(sql) => {
-   // already have table, verify it's the same schema
-   // if sql != create_sql {
-   println!("turbosql_migrations is: {:?}", sql);
-   // println!("{}", create_sql);
-   // panic!("Turbosql sqlite schema does not match! Delete database file to continue.");
-  }
+  Ok(_) => (),
  }
+
+ let result = conn
+  .prepare("SELECT migration FROM turbosql_migrations ORDER BY rowid")
+  .unwrap()
+  .query_map(params![], |row| {
+   // let sql: String = row.get(0).unwrap();
+   Ok(row.get(0).unwrap())
+  })
+  .unwrap()
+  .map(|x| x.unwrap())
+  .collect::<Vec<String>>();
+
+ println!("turbosql_migrations is: {:#?}", result);
+
+ println!("toml_decoded is: {:#?}", toml_decoded);
 
  Mutex::new(conn)
 });

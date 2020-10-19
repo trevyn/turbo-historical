@@ -18,7 +18,7 @@ use once_cell::sync::Lazy;
 use proc_macro2::Span;
 use proc_macro_error::{abort, abort_call_site, proc_macro_error};
 use quote::{format_ident, quote, ToTokens};
-use rusqlite::{Connection, Statement};
+use rusqlite::{params, Connection, Statement};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -225,8 +225,21 @@ struct MigrationsToml {
 fn migrations_to_tempdb(migrations: &Vec<String>) -> Connection {
  let tempdb = rusqlite::Connection::open_in_memory().unwrap();
 
- migrations.iter().for_each(|m| {
-  tempdb.execute(m, rusqlite::params![]).expect("Running migrations on temp db");
+ tempdb
+  .execute_batch(
+   r#"
+    CREATE TABLE turbosql_migrations (
+     rowid INTEGER PRIMARY KEY,
+     migration TEXT NOT NULL
+    );
+   "#,
+  )
+  .unwrap();
+
+ migrations.iter().for_each(|m| match tempdb.execute(m, params![]) {
+  Ok(_) => (),
+  Err(rusqlite::Error::ExecuteReturnedResults) => (), // pragmas
+  Err(e) => abort_call_site!("Running migrations on temp db: {:?}", e),
  });
 
  tempdb
@@ -236,7 +249,7 @@ fn migrations_to_schema(migrations: &Vec<String>) -> String {
  migrations_to_tempdb(migrations)
   .prepare("SELECT sql FROM sqlite_master WHERE type='table' ORDER BY sql")
   .unwrap()
-  .query_map(rusqlite::params![], |row| {
+  .query_map(params![], |row| {
    let sql: String = row.get(0).unwrap();
    Ok(sql)
   })
