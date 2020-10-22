@@ -96,6 +96,8 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
  let toml_decoded: MigrationsToml = toml::from_str(include_str!("../../migrations.toml"))
   .expect("Unable to decode embedded migrations.toml");
 
+ let target_migrations = toml_decoded.migrations_append_only.unwrap_or_else(Vec::new);
+
  let mut db_path = __DB_PATH.lock().unwrap();
 
  db_path.opened = true;
@@ -146,7 +148,7 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
   Ok(_) => (),
  }
 
- let result = conn
+ let appied_migrations = conn
   .prepare("SELECT migration FROM turbosql_migrations ORDER BY rowid")
   .unwrap()
   .query_map(params![], |row| {
@@ -157,9 +159,15 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
   .map(|x| x.unwrap())
   .collect::<Vec<String>>();
 
- println!("turbosql_migrations is: {:#?}", result);
+ println!("appied_migrations is: {:#?}", appied_migrations);
 
- println!("toml_decoded is: {:#?}", toml_decoded);
+ println!("target_migrations is: {:#?}", target_migrations);
+
+ // execute migrations
+
+ // walk through
+
+ // a.iter().zip(&b).filter(|&(a, b)| a == b).count();
 
  Mutex::new(conn)
 });
