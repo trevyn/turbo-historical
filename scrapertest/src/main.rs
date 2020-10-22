@@ -109,6 +109,12 @@ struct FileCache {
 }
 
 #[derive(Turbosql, Clone, Debug, Default)]
+struct Rcloneconf {
+ rowid: Option<i64>,
+ conf: Option<String>,
+}
+
+#[derive(Turbosql, Clone, Debug, Default)]
 struct FileKnowledge {
  rowid: Option<i64>,
  file_id: Option<i64>,
