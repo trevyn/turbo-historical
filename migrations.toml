@@ -54,8 +54,5 @@ CREATE TABLE fileknowledge (rowid INTEGER PRIMARY KEY, file_id INTEGER, kind TEX
 CREATE TABLE hostaffection (rowid INTEGER PRIMARY KEY, host TEXT, affection INTEGER)
 CREATE TABLE rcloneitem (rowid INTEGER PRIMARY KEY, id TEXT, path TEXT, name TEXT, size INTEGER, mime_type TEXT, mod_time TEXT, is_dir BOOLEAN)
 CREATE TABLE resultitem (rowid INTEGER PRIMARY KEY, url TEXT, host TEXT, title TEXT, snippet TEXT, source_query TEXT, source_query_url TEXT, source_result_pos INTEGER, last_scraped REAL)
-CREATE TABLE turbosql_migrations (
-     rowid INTEGER PRIMARY KEY,
-     migration TEXT NOT NULL
-    )
+CREATE TABLE turbosql_migrations (rowid INTEGER PRIMARY KEY, migration TEXT NOT NULL)
 CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)'''

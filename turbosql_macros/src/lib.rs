@@ -227,12 +227,7 @@ fn migrations_to_tempdb(migrations: &Vec<String>) -> Connection {
 
  tempdb
   .execute_batch(
-   r#"
-    CREATE TABLE turbosql_migrations (
-     rowid INTEGER PRIMARY KEY,
-     migration TEXT NOT NULL
-    );
-   "#,
+   "CREATE TABLE turbosql_migrations (rowid INTEGER PRIMARY KEY, migration TEXT NOT NULL);",
   )
   .unwrap();
 

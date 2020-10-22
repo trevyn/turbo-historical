@@ -131,10 +131,7 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
       PRAGMA wal_autocheckpoint=8000;
       PRAGMA synchronous=NORMAL;
 
-      CREATE TABLE turbosql_migrations (
-       rowid INTEGER PRIMARY KEY,
-       migration TEXT NOT NULL
-      );
+      CREATE TABLE turbosql_migrations (rowid INTEGER PRIMARY KEY, migration TEXT NOT NULL);
 
       INSERT INTO turbosql_migrations(migration)
        VALUES (
