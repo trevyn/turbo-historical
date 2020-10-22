@@ -111,6 +111,17 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
  )
  .expect("rusqlite::Connection::open_with_flags");
 
+ conn
+  .execute_batch(
+   r#"
+    PRAGMA auto_vacuum=INCREMENTAL;
+    PRAGMA journal_mode=WAL;
+    PRAGMA wal_autocheckpoint=8000;
+    PRAGMA synchronous=NORMAL;
+   "#,
+  )
+  .expect("Execute PRAGMAs");
+
  let result = conn.query_row(
   "SELECT sql FROM sqlite_master WHERE name = ?",
   params!["turbosql_migrations"],
@@ -125,22 +136,7 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
    // no migrations table exists yet, create
    conn
     .execute_batch(
-     r#"
-      PRAGMA auto_vacuum=INCREMENTAL;
-      PRAGMA journal_mode=WAL;
-      PRAGMA wal_autocheckpoint=8000;
-      PRAGMA synchronous=NORMAL;
-
-      CREATE TABLE turbosql_migrations (rowid INTEGER PRIMARY KEY, migration TEXT NOT NULL);
-
-      INSERT INTO turbosql_migrations(migration)
-       VALUES (
-        "PRAGMA auto_vacuum=INCREMENTAL",
-        "PRAGMA journal_mode=WAL",
-        "PRAGMA wal_autocheckpoint=8000",
-        "PRAGMA synchronous=NORMAL",
-       );
-     "#,
+     r#"CREATE TABLE turbosql_migrations (rowid INTEGER PRIMARY KEY, migration TEXT NOT NULL)"#,
     )
     .expect("CREATE TABLE turbosql_migrations");
   }
