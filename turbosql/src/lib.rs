@@ -29,6 +29,8 @@ struct Person {
 
 #![allow(unused_imports)]
 
+use itertools::EitherOrBoth::{Both, Left, Right};
+use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use rusqlite::{Connection, OpenFlags, Statement};
 use serde::Deserialize;
@@ -165,9 +167,17 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
 
  // execute migrations
 
- // walk through
-
- // a.iter().zip(&b).filter(|&(a, b)| a == b).count();
+ appied_migrations.iter().zip_longest(&target_migrations).for_each(|item| match item {
+  Both(a, b) => assert!(a == b),
+  Left(_) => panic!("More migrations are applied than target"),
+  Right(migration) => {
+   eprintln!("insert -> {:#?}", migration);
+   conn.execute(migration, params![]).unwrap();
+   conn
+    .execute("INSERT INTO turbosql_migrations(migration) VALUES(?)", params![migration])
+    .unwrap();
+  }
+ });
 
  Mutex::new(conn)
 });
