@@ -8,7 +8,7 @@ import { DateTime } from "luxon";
 import { Routes, Route, Link, useMatch, useLocation, useNavigate } from "react-router-dom";
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import * as codegen from "./graphql-codegen";
-import ReactPlayer from "react-player";
+// import ReactPlayer from "react-player";
 
 // if we're at port 3000, assume local dev server, and redirect graphql to port 3020
 const port = window.location.port === "3000" ? "3020" : window.location.port;
