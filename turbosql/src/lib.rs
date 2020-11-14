@@ -45,11 +45,11 @@ pub use once_cell::sync::Lazy;
 #[doc(hidden)]
 pub use rusqlite::{
  params, types::FromSql, types::FromSqlResult, types::ToSql, types::ToSqlOutput, types::Value,
- types::ValueRef, Error, Result,
+ types::ValueRef, Error, OptionalExtension, Result,
 };
 #[doc(hidden)]
 pub use serde::Serialize;
-pub use turbosql_macros::{execute, select, select_cte, Turbosql};
+pub use turbosql_macros::{execute, select, Turbosql};
 
 /// Wrapper for `Vec<u8>` that provides `Read`, `Write` and `Seek` traits.
 pub type Blob = Vec<u8>;
@@ -150,7 +150,7 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
   Ok(_) => (),
  }
 
- let appied_migrations = conn
+ let applied_migrations = conn
   .prepare("SELECT migration FROM turbosql_migrations ORDER BY rowid")
   .unwrap()
   .query_map(params![], |row| {
@@ -161,13 +161,13 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
   .map(|x| x.unwrap())
   .collect::<Vec<String>>();
 
- println!("appied_migrations is: {:#?}", appied_migrations);
+ println!("applied_migrations is: {:#?}", applied_migrations);
 
  println!("target_migrations is: {:#?}", target_migrations);
 
  // execute migrations
 
- appied_migrations.iter().zip_longest(&target_migrations).for_each(|item| match item {
+ applied_migrations.iter().zip_longest(&target_migrations).for_each(|item| match item {
   Both(a, b) => assert!(a == b),
   Left(_) => panic!("More migrations are applied than target"),
   Right(migration) => {

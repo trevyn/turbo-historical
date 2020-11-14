@@ -23,25 +23,39 @@ use url::Url;
 use warp::http::{HeaderMap, Method};
 use warp::Filter;
 
-use bytes::{Bytes, BytesMut};
-use futures::stream::{Stream, TryStreamExt};
+use bytes::Bytes;
+use futures::stream::Stream;
 use futures::task::Poll;
-use tokio::io::AsyncRead;
+// use tokio::io::AsyncRead;
 // use tokio::prelude::*;
-use tokio_util::codec;
+// use tokio_util::codec;
 
-#[allow(dead_code)]
+#[allow(dead_code, non_snake_case)]
 extern "C" {
  fn GoListJSON(path: *const c_char);
  fn GoSetConfig(path: *const c_char);
  fn GoFetchFiledata(path: *const c_char, startbytepos: c_longlong, endbytepos: c_longlong);
 }
 
+trait Ok<T> {
+ fn ok(self) -> Result<T, anyhow::Error>;
+}
+
+impl<T> Ok<T> for Option<T> {
+ fn ok(self) -> Result<T, anyhow::Error> {
+  self.ok_or_else(|| anyhow::anyhow!("NoneError"))
+ }
+}
+
+macro_rules! here {
+ () => {
+  concat!("at ", file!(), " line ", line!(), " column ", column!())
+ };
+}
+
 #[derive(rust_embed::RustEmbed)]
 #[folder = "../turbo_frontend/build"]
 struct Asset;
-
-// CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)
 
 #[cfg(test)]
 mod tests {
@@ -268,23 +282,22 @@ struct Query;
 #[graphql_object]
 impl Query {
  async fn get_bookmarks() -> FieldResult<Vec<BookmarkQueryResultItem>> {
-  Ok(select!(BookmarkQueryResultItem r#"
+  Ok(select!(Vec<BookmarkQueryResultItem> r#"
    url,
    title,
    host,
    snippet,
-   bookmarked,
+   TRUE AS bookmarked,
    hostaffection,
    bookmark_timestamp
    FROM (
     SELECT
-    bookmark.url as url,
-    resultitem.title as title,
-    resultitem.host as host,
-    resultitem.snippet as snippet,
-    true as bookmarked,
-    hostaffection.affection as hostaffection,
-    bookmark.timestamp as bookmark_timestamp
+    bookmark.url AS url,
+    resultitem.title AS title,
+    resultitem.host AS host,
+    resultitem.snippet AS snippet,
+    hostaffection.affection AS hostaffection,
+    bookmark.timestamp AS bookmark_timestamp
     FROM bookmark
     LEFT JOIN resultitem ON resultitem.url = bookmark.url
     LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
@@ -324,14 +337,14 @@ impl Query {
  }
 
  async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItemQueryResultItem>> {
-  Ok(select!(RcloneItemQueryResultItem r#"
+  Ok(select!(Vec<RcloneItemQueryResultItem> r#"
    path,
    name,
    is_dir,
    mime_type,
    mod_time,
    size,
-   (SELECT sum(size) FROM rcloneitem rci2 WHERE rci2.path LIKE rci1.path || "/%") AS dir_size
+   (SELECT SUM(size) FROM rcloneitem rci2 WHERE rci2.path LIKE rci1.path || "/%") AS dir_size
    FROM rcloneitem rci1
    WHERE path = ? || name"#, path)?)
  }
@@ -365,33 +378,33 @@ async fn instant_search(query: String) -> FieldResult<Vec<SearchQueryResultItem>
 
  log::info!("match_query = {:?}", match_query);
 
- Ok(select!(SearchQueryResultItem r#"
-  search_highlighted_url_String,
-  title_String,
-  snippet_String,
-  url_String,
-  host_String,
-  bookmark.url IS NOT NULL AS bookmarked_bool,
-  IFNULL(hostaffection.affection, 0) AS hostaffection_i32,
-  min(rank) as rank_f64
+ Ok(select!(Vec<SearchQueryResultItem> r#"
+  search_highlighted_url,
+  title,
+  snippet,
+  sq.url AS url,
+  sq.host AS host,
+  bookmark.url IS NOT NULL AS bookmarked,
+  IFNULL(hostaffection.affection, 0) AS hostaffection,
+  MIN(sq.rank) AS rank
   
   FROM (
    SELECT
-    highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
-    highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
-    highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
-    resultitem2.url AS url_String,
-    resultitem2.host AS host_String,
+    highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url,
+    highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title,
+    highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet,
+    url,
+    host,
     rank
     FROM resultitem2
     WHERE resultitem2 MATCH ?
     LIMIT -1 OFFSET 0  -- prevents "unable to use function highlight in the requested context"
-  )
+  ) sq
 
-  LEFT JOIN bookmark ON url_String = bookmark.url
-  LEFT JOIN hostaffection ON host_String = hostaffection.host
-  GROUP BY url_String
-  ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, rank_f64
+  LEFT JOIN bookmark ON sq.url = bookmark.url
+  LEFT JOIN hostaffection ON sq.host = hostaffection.host
+  GROUP BY sq.url
+  ORDER BY bookmarked DESC, hostaffection DESC, MIN(sq.rank)
   LIMIT 30
  "#, match_query)?)
 }
@@ -437,31 +450,31 @@ async fn scrape_search(query: String) -> FieldResult<Vec<SearchQueryResultItem>>
 
  log::info!("match_query = {:?}", match_query);
 
- Ok(select!(SearchQueryResultItem r#"
-  search_highlighted_url_String,
-  title_String,
-  snippet_String,
-  url_String,
-  resultitem.host AS host_String,
-  bookmark.url IS NOT NULL AS bookmarked_bool,
-  IFNULL(hostaffection.affection, 0) AS hostaffection_i32,
-  min(resultitem.source_result_pos) as rank_f64
+ Ok(select!(Vec<SearchQueryResultItem> r#"
+  search_highlighted_url,
+  sq.title AS title,
+  sq.snippet AS snippet,
+  sq.url AS url,
+  resultitem.host AS host,
+  bookmark.url IS NOT NULL AS bookmarked,
+  IFNULL(hostaffection.affection, 0) AS hostaffection,
+  MIN(resultitem.source_result_pos) AS rank
 
   FROM (
-   SELECT highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url_String,
-   highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title_String,
-   highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet_String,
-   url AS url_String
+   SELECT highlight(resultitem2, 1, '<span class="search-highlight-url">', '</span>') AS search_highlighted_url,
+   highlight(resultitem2, 2, '<span class="search-highlight">', '</span>') AS title,
+   highlight(resultitem2, 3, '<span class="search-highlight">', '</span>') AS snippet,
+   url
    FROM resultitem2(?)
-   WHERE resultitem2.url in (SELECT DISTINCT url FROM resultitem WHERE source_query = ?)
+   WHERE resultitem2.url IN (SELECT DISTINCT url FROM resultitem WHERE source_query = ?)
    LIMIT -1 OFFSET 0  -- prevents "unable to use function highlight in the requested context"
-  )
+  ) sq
 
-  LEFT JOIN resultitem ON resultitem.url = url_String AND resultitem.source_query = ?
-  LEFT JOIN bookmark ON url_String = bookmark.url
+  LEFT JOIN resultitem ON resultitem.url = sq.url AND resultitem.source_query = ?
+  LEFT JOIN bookmark ON sq.url = bookmark.url
   LEFT JOIN hostaffection ON resultitem.host = hostaffection.host
-  GROUP BY url_String
-  ORDER BY bookmarked_bool DESC, hostaffection_i32 DESC, rank_f64
+  GROUP BY sq.url
+  ORDER BY bookmarked DESC, hostaffection DESC, rank
   LIMIT 30
  "#,  match_query, query, query)?)
 }
@@ -474,10 +487,9 @@ impl Mutations {
   match affection {
    0 => {
     execute!("DELETE FROM hostaffection WHERE host = ?", host)?;
-    ()
    }
    _ => {
-    let host_affection: Vec<HostAffection> = select!(HostAffection "WHERE host = ?", host)?;
+    let host_affection: Vec<HostAffection> = select!(Vec<HostAffection> "WHERE host = ?", host)?;
     if host_affection.is_empty() {
      HostAffection { host: Some(host.clone()), affection: Some(affection), ..Default::default() }
       .insert()?;
@@ -495,7 +507,7 @@ impl Mutations {
     execute!("DELETE FROM bookmark WHERE url = ?", url)?;
    }
    true => {
-    let bookmark: Vec<Bookmark> = select!(Bookmark "WHERE url = ?", url)?;
+    let bookmark: Vec<Bookmark> = select!(Vec<Bookmark> "WHERE url = ?", url)?;
     if bookmark.is_empty() {
      Bookmark {
       url: Some(url.clone()),
@@ -555,21 +567,21 @@ async fn main() -> anyhow::Result<()> {
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");
 
- // info!("one is {:?}", select!("1 as one_i64")?);
+ info!("one is {:?}", select!(i64 "1")?);
  // execute!("").ok();
 
- // execute!("CREATE VIRTUAL TABLE resultitem2 USING fts5(myrowid, url, title, snippet, host)").ok();
-
  info!("reading!");
- let items = RcloneItem::select_all();
+ // let items = RcloneItem::select_all();
+ let items = select!(Vec<RcloneItem>)?;
  info!("read! {}", items.len());
- let rows = select!("max(rowid) AS max_file_id_i64 FROM fileknowledge")?;
- let mut max_file_id = match rows.len() {
-  0 => 1,
-  _ => rows[0].max_file_id,
- };
+ let mut max_file_id = select!(i64 "MAX(rowid) FROM fileknowledge").unwrap_or(1);
+ // let rows = select!("max(rowid) AS max_file_id_i64 FROM fileknowledge")?;
+ // let mut max_file_id = match rows.len() {
+ //  0 => 1,
+ //  _ => rows[0].max_file_id,
+ // };
 
- execute!("BEGIN TRANSACTION").unwrap();
+ execute!("BEGIN TRANSACTION")?;
 
  let _ = items
   .iter()
@@ -579,7 +591,7 @@ async fn main() -> anyhow::Result<()> {
    max_file_id = max_file_id + 1;
    // info!("{:?}", max_file_id);
 
-   if item.size.clone().context("size")?.as_i64() > 0 {
+   if item.size.clone().ok()?.as_i64() > 0 {
    execute!(
     r#"INSERT INTO fileknowledge (file_id, kind, value) VALUES (?, "name", ?), (?, "size", ?), (?, "localid", ?)"#,
     max_file_id,
@@ -592,29 +604,11 @@ async fn main() -> anyhow::Result<()> {
    .unwrap();
   }
 
-   // FileKnowledge {
-   //  rowid: None,
-   //  file_id: Some(max_file_id),
-   //  kind: Some("size".to_string()),
-   //  value: Some(item.size.clone().unwrap().to_string()),
-   // }
-   // .insert()
-   // .unwrap();
-
-   // FileKnowledge {
-   //  rowid: None,
-   //  file_id: Some(max_file_id),
-   //  kind: Some("name".to_string()),
-   //  value: Some(item.name.clone().unwrap()),
-   // }
-   // .insert()
-   // .unwrap();
-
    Ok(())
   })
   .collect::<Vec<_>>();
 
- execute!("COMMIT").unwrap();
+ execute!("COMMIT")?;
 
  // info!("reading files!");
  // let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
@@ -626,8 +620,12 @@ async fn main() -> anyhow::Result<()> {
  let opts = Opts::parse();
  let authorization = Box::leak(format!("Bearer {}", opts.password).into_boxed_str());
 
- let config = CString::new(include_str!("rclone.conf")).unwrap(); // rclone.conf
-                                                                  // let config = CString::new("").unwrap(); // rclone.conf
+ // get config
+ let config = CString::new(select!(Rcloneconf)?.conf.unwrap()).unwrap();
+
+ eprintln!("config is -> {:?}", config);
+ // let config = CString::new(include_str!("rclone.conf")).unwrap();
+
  unsafe {
   GoSetConfig(config.as_ptr());
  }
@@ -687,7 +685,7 @@ async fn main() -> anyhow::Result<()> {
    match (|| -> anyhow::Result<_> {
     Ok(warp::reply::with_header(
      std::str::from_utf8(
-      Asset::get(path.as_str().trim_start_matches('/')).context("None")?.as_ref(),
+      Asset::get(path.as_str().trim_start_matches('/')).context(here!())?.as_ref(),
      )
      .unwrap()
      .to_string(),
@@ -907,25 +905,26 @@ async fn filedl_get_handler(
   let path = fullpath.as_str().trim_start_matches("/filedl/");
 
   let rcloneitem = select!(RcloneItem "WHERE path = ?", path)?;
-  let rcloneitem = rcloneitem[0].clone();
+  // let rcloneitem = rcloneitem[0].clone();
   let size = rcloneitem.size.unwrap().as_i64();
+  let endbytepos = size - 1;
 
-  let fc = select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
-  path, 0, size - 1)?;
+  let fc = select!(Option<FileCache> "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
+  path, 0, endbytepos)?;
 
-  let fc = match fc.len() {
-   0 => {
+  let fc = match fc {
+   None => {
     let path_cstr = CString::new(path)?;
     info!("starting fetch, {} bytes", size);
     spawn_blocking(move || unsafe {
-     GoFetchFiledata(path_cstr.as_ptr(), 0, size - 1);
+     GoFetchFiledata(path_cstr.as_ptr(), 0, endbytepos);
     })
     .await?;
     info!("file fetched");
     select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
-    path, 0, size - 1)?
+    path, 0, endbytepos)?
    }
-   _ => fc,
+   Some(fc) => fc,
   };
 
   info!("{:#?}", rcloneitem.mime_type);
@@ -933,11 +932,11 @@ async fn filedl_get_handler(
   Ok(
    warp::http::Response::builder()
     // .header("content-type", "video/webm")
-    .header("content-type", rcloneitem.mime_type.context("mime_type")?)
+    .header("content-type", rcloneitem.mime_type.context(here!())?)
     .header("content-length", size)
     .header("accept-ranges", "bytes")
     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
-    .body(fc[0].bytes.clone().context("bytes")?),
+    .body(fc.bytes.clone().context(here!())?),
   )
  }
  .await
