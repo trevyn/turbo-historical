@@ -7,12 +7,12 @@ version = "0.0.0"
 
 [dependencies]
 # ammonia = {path = "../ammonia"}
-anyhow = "1.0.34"
 # html5ever = "0.24.1"
-clap = "=3.0.0-beta.2"
-futures = "=0.3.7"
 # maplit = "1.0.2"
+anyhow = "1.0.34"
 bytes = "=0.5.6"
+clap = "=3.0.0-beta.2"
+futures = "=0.3.8"
 juniper = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
 juniper_warp = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
 log = "0.4.11"

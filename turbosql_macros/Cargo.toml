@@ -13,7 +13,6 @@ proc-macro = true
 [dependencies]
 fs2 = "0.4.3"
 once_cell = "=1.4.1"
-# onig = "6.1.0"
 proc-macro-error = "1.0.4"
 proc-macro2 = "1.0.24"
 quote = "1.0.7"
