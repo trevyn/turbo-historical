@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+video {
+ outline: none;
+}
+
 /* from the server; putting utility css classes in a server response feels weird */
 .search-highlight {
  @apply bg-yellow-100;

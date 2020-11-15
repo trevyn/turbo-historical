@@ -8,7 +8,7 @@ import { DateTime } from "luxon";
 import { Routes, Route, Link, useMatch, useLocation, useNavigate } from "react-router-dom";
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import * as codegen from "./graphql-codegen";
-// import ReactPlayer from "react-player";
+import ReactPlayer from "react-player";
 
 // if we're at port 3000, assume local dev server, and redirect graphql to port 3020
 const port = window.location.port === "3000" ? "3020" : window.location.port;
@@ -21,30 +21,19 @@ const apollo = new ApolloClient({
  },
 });
 
-const ConstructionComponent: FC = () => {
- return (
-  <div>
-   {/* <ReactPlayer
-    url="http://localhost:3020/filedl/Downloads/video.mkv"
-    controls={true}
-    // playing={true}
-   /> */}
-   <video
-    id="my-video"
-    className="video-js"
-    controls
-    preload="auto"
-    width="640"
-    height="264"
-    poster="MY_VIDEO_POSTER.jpg"
-    data-setup="{}"
-   >
-    {/* <source src="MY_VIDEO.mp4" type="video/mp4" /> */}
-    <source src="http://localhost:3020/filedl/Downloads/video.mkv" type="video/webm" />
-   </video>
-  </div>
- );
-};
+const ConstructionComponent: FC = () => (
+ <div className="relative pt-7/12">
+  <ReactPlayer
+   className="absolute top-0 left-0"
+   width="100%"
+   height="100%"
+   playing={true}
+   controls={true}
+   light={false}
+   url="http://localhost:3020/filedl/archive2/weird/halu.mp4"
+  />
+ </div>
+);
 
 interface NavItem {
  linkpath: string;
@@ -266,11 +255,11 @@ function App() {
            <Route
             path={navItems[item].matchpath}
             element={
-             <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
-              <span className="cursor-default text-gray-500">
-               <ConstructionComponent />
-              </span>
-             </nav>
+             // <nav className="pl-5 p-8 pb-10 mt-px flex items-center text-sm leading-5 font-medium">
+             //  <span className="cursor-default text-gray-500">
+             <ConstructionComponent />
+             //  </span>
+             // </nav>
             }
            />
           ),
