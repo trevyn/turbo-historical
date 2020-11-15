@@ -105,9 +105,6 @@ fn makesql_create(table: &Table) -> String {
  sql
 }
 
-// TODO make sure this works if user puts rowid member someplace other than first
-// (or enforce first position)
-
 fn make_migrations(table: &Table) -> Vec<String> {
  let mut vec = vec![format!("CREATE TABLE {} (rowid INTEGER PRIMARY KEY)", table.name)];
 
