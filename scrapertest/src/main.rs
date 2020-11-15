@@ -73,7 +73,7 @@ mod tests {
   }
 
   let path = "".to_owned();
-  let cstring = CString::new(path.clone()).unwrap();
+  let cstring = CString::new(path).unwrap();
 
   unsafe {
    GoListJSON(cstring.as_ptr());
@@ -84,10 +84,6 @@ mod tests {
   //  params![path],
   // )
   // .unwrap();
-
-  // let files = File::select_all();
-
-  // eprintln!("files: {:#?}", files);
 
   // eprintln!("the file is {:#?}", files.iter().filter_map(|f| f.path.clone()).collect::<Vec<_>>());
 
@@ -311,11 +307,10 @@ impl Query {
  async fn search(query: String, force_scrape: bool) -> FieldResult<Vec<SearchQueryResultItem>> {
   if force_scrape {
    log::info!("scrape_search({:?})", query);
-   return scrape_search(query).await;
-  }
-  {
+   scrape_search(query).await
+  } else {
    log::info!("instant_search({:?})", query);
-   return instant_search(query).await;
+   instant_search(query).await
   }
  }
 
@@ -373,7 +368,7 @@ fn convert_query_for_fts5(query: String) -> String {
 }
 
 async fn instant_search(query: String) -> FieldResult<Vec<SearchQueryResultItem>> {
- let match_query = convert_query_for_fts5(query.clone());
+ let match_query = convert_query_for_fts5(query);
  // let query = convert_query_for_fts5(query.clone()).split(" ").collect::<Vec<_>>().join(" OR ");
 
  log::info!("match_query = {:?}", match_query);
@@ -446,7 +441,7 @@ async fn scrape_search(query: String) -> FieldResult<Vec<SearchQueryResultItem>>
  // re-do search against database
 
  let match_query =
-  convert_query_for_fts5(query.clone()).split(" ").collect::<Vec<_>>().join(" OR ");
+  convert_query_for_fts5(query.clone()).split(' ').collect::<Vec<_>>().join(" OR ");
 
  log::info!("match_query = {:?}", match_query);
 
@@ -567,63 +562,55 @@ async fn main() -> anyhow::Result<()> {
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");
 
- info!("one is {:?}", select!(i64 "1")?);
- // execute!("").ok();
-
- info!("reading!");
- // let items = RcloneItem::select_all();
- let items = select!(Vec<RcloneItem>)?;
- info!("read! {}", items.len());
- let mut max_file_id = select!(i64 "MAX(rowid) FROM fileknowledge").unwrap_or(1);
- // let rows = select!("max(rowid) AS max_file_id_i64 FROM fileknowledge")?;
- // let mut max_file_id = match rows.len() {
- //  0 => 1,
- //  _ => rows[0].max_file_id,
- // };
-
- execute!("BEGIN TRANSACTION")?;
-
- let _ = items
-  .iter()
-  .map(|item| -> anyhow::Result<()> {
-   // info!("{:?} {:?}", item.name, item.size);
-
-   max_file_id = max_file_id + 1;
-   // info!("{:?}", max_file_id);
-
-   if item.size.clone().ok()?.as_i64() > 0 {
-   execute!(
-    r#"INSERT INTO fileknowledge (file_id, kind, value) VALUES (?, "name", ?), (?, "size", ?), (?, "localid", ?)"#,
-    max_file_id,
-    item.name,
-    max_file_id,
-    item.size,
-    max_file_id,
-    item.id
-   )
-   .unwrap();
-  }
-
-   Ok(())
-  })
-  .collect::<Vec<_>>();
-
- execute!("COMMIT")?;
-
  // info!("reading files!");
  // let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
  // let items: Vec<RcloneItem> = serde_json::from_str(&contents)?;
  // RcloneItem::insert_batch(&items);
-
  // info!("inserted!");
+ // return Ok(());
+
+ info!("reading!");
+ let items: Vec<RcloneItem> = select!(Vec<RcloneItem>)?;
+ info!("read! {}", items.len());
+
+ let mut max_file_id = select!(i64 "MAX(rowid) FROM fileknowledge").unwrap_or(1);
+
+ info!("max_file_id! {}", max_file_id);
+
+ // return Ok(());
+
+ execute!("BEGIN TRANSACTION")?;
+
+ items.iter().map(|item| {
+  if item.size.clone().ok()?.as_i64() > 0 {
+   max_file_id += 1;
+   execute!(
+    r#"INSERT INTO fileknowledge (file_id, kind, value) VALUES (?, "name", ?), (?, "size", ?), (?, "localid", ?)"#,
+    max_file_id, item.name,
+    max_file_id, item.size,
+    max_file_id, item.id
+   )?;
+  }
+  Ok(())
+ }).collect::<anyhow::Result<Vec<()>>>()?;
+
+ execute!("COMMIT")?;
+
+ info!("committed!");
 
  let opts = Opts::parse();
  let authorization = Box::leak(format!("Bearer {}", opts.password).into_boxed_str());
 
- // get config
- let config = CString::new(select!(Rcloneconf)?.conf.unwrap()).unwrap();
+ // get rclone config
 
- eprintln!("config is -> {:?}", config);
+ let conf_path =
+  directories_next::BaseDirs::new().unwrap().home_dir().join(".config/rclone/rclone.conf");
+
+ let config = std::fs::read_to_string(&conf_path)
+  .unwrap_or_else(|e| panic!("Something went wrong reading {:#?}: {}", conf_path, e));
+
+ let config = CString::new(config).unwrap();
+ // let config = CString::new(select!(Rcloneconf)?.conf.unwrap()).unwrap();
  // let config = CString::new(include_str!("rclone.conf")).unwrap();
 
  unsafe {
@@ -905,14 +892,12 @@ async fn filedl_get_handler(
   let path = fullpath.as_str().trim_start_matches("/filedl/");
 
   let rcloneitem = select!(RcloneItem "WHERE path = ?", path)?;
-  // let rcloneitem = rcloneitem[0].clone();
   let size = rcloneitem.size.unwrap().as_i64();
   let endbytepos = size - 1;
 
-  let fc = select!(Option<FileCache> "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
-  path, 0, endbytepos)?;
-
-  let fc = match fc {
+  let filecache = match select!(Option<FileCache> "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
+  path, 0, endbytepos)? {
+   Some(fc) => fc,
    None => {
     let path_cstr = CString::new(path)?;
     info!("starting fetch, {} bytes", size);
@@ -924,7 +909,6 @@ async fn filedl_get_handler(
     select!(FileCache "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
     path, 0, endbytepos)?
    }
-   Some(fc) => fc,
   };
 
   info!("{:#?}", rcloneitem.mime_type);
@@ -936,7 +920,7 @@ async fn filedl_get_handler(
     .header("content-length", size)
     .header("accept-ranges", "bytes")
     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
-    .body(fc.bytes.clone().context(here!())?),
+    .body(filecache.bytes.context(here!())?),
   )
  }
  .await

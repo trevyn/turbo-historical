@@ -12,6 +12,7 @@ version = "0.0.0"
 anyhow = "1.0.34"
 bytes = "=0.5.6"
 clap = "=3.0.0-beta.2"
+directories-next = "2.0.0"
 futures = "=0.3.8"
 juniper = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
 juniper_warp = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}

@@ -161,9 +161,8 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
   .map(|x| x.unwrap())
   .collect::<Vec<String>>();
 
- println!("applied_migrations is: {:#?}", applied_migrations);
-
- println!("target_migrations is: {:#?}", target_migrations);
+ // println!("applied_migrations is: {:#?}", applied_migrations);
+ // println!("target_migrations is: {:#?}", target_migrations);
 
  // execute migrations
 
