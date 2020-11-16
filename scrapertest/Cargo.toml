@@ -9,28 +9,28 @@ version = "0.0.0"
 # ammonia = {path = "../ammonia"}
 # html5ever = "0.24.1"
 # maplit = "1.0.2"
-anyhow = "1.0.34"
-bytes = "=0.5.6"
-clap = "=3.0.0-beta.2"
-directories-next = "2.0.0"
-futures = "=0.3.8"
-juniper = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
-juniper_warp = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"}
-log = "0.4.11"
-mime_guess = "2.0.3"
-once_cell = "=1.4.1"
-pretty_env_logger = "0.4.0"
-regex = "1.4.2"
-reqwest = "0.10.8"
-rust-embed = "5.6.0"
-scraper = "0.12.0"
-serde = {version = "1.0.117", features = ["derive"]}
-serde_json = "1.0.59"
-sysinfo = "0.15.3"
-tokio = {version = "=0.2.22", features = ["full"]}
-tokio-util = {version = "=0.3.1", features = ["codec"]}
-turbosql = {path = "../turbosql"}
-url = "=2.1.1"
-urlencoding = "1.1.1"
-ux = {git = "https://github.com/1aim/uX", rev = "e17f5565d27bb4c1ebfd408329c7c075c58f0a0a", features = ["serde"]}
+anyhow = "1.0.34" 
+bytes = "=0.5.6" # 0.6 is part of tokio 0.3 ecosystem
+clap = "=3.0.0-beta.2" 
+directories-next = "2.0.0" 
+futures = "=0.3.8" 
+juniper = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"} 
+juniper_warp = {git = "https://github.com/graphql-rust/juniper", rev = "092a9851fbad5e848167b61dccfe48101cd6eea7"} 
+log = "0.4.11" 
+mime_guess = "2.0.3" 
+once_cell = "=1.4.1" # wait a few weeks for 1.5 to settle
+pretty_env_logger = "0.4.0" 
+regex = "1.4.2" 
+reqwest = "0.10.8" 
+rust-embed = "5.6.0" 
+scraper = "0.12.0" 
+serde = {version = "1.0.117", features = ["derive"]} 
+serde_json = "1.0.59" 
+sysinfo = "0.15.3" 
+tokio = {version = "=0.2.22", features = ["full"]}# wait a few weeks for 0.2.23 to settle, 0.3 requires ecosystem support         
+tokio-util = {version = "=0.3.1", features = ["codec"]}# 0.4+ is part of 0.3 ecosystem     
+turbosql = {path = "../turbosql"} 
+url = "=2.1.1" # wait a few weeks for 2.2 to settle
+urlencoding = "1.1.1" 
+ux = {git = "https://github.com/1aim/uX", rev = "e17f5565d27bb4c1ebfd408329c7c075c58f0a0a", features = ["serde"]} 
 warp = {version = "0.2.5", features = ["tls"]}

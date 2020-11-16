@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::Clap;
 use juniper::{graphql_object, EmptySubscription, FieldResult, GraphQLObject};
-use log::{error, info};
+use log::{debug, error, info, trace, warn};
 use once_cell::sync::Lazy;
 use reqwest::header;
 use scraper::{Html, Selector};
@@ -332,6 +332,8 @@ impl Query {
  }
 
  async fn get_rclone_items(path: String) -> FieldResult<Vec<RcloneItemQueryResultItem>> {
+  debug!("getRcloneItems(path:{:#?})", path);
+
   Ok(select!(Vec<RcloneItemQueryResultItem> r#"
    path,
    name,
@@ -558,9 +560,14 @@ fn anyhow_to_warp_rejection(err: anyhow::Error) -> warp::Rejection {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
- std::env::set_var("RUST_LOG", "info");
+ // std::env::set_var("RUST_LOG", "trace");
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");
+
+ trace!("trace enabled");
+ debug!("debug enabled");
+ info!("info enabled");
+ warn!("warn enabled");
 
  // info!("reading files!");
  // let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
