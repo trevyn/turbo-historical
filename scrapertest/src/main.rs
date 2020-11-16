@@ -341,9 +341,9 @@ impl Query {
    mime_type,
    mod_time,
    size,
-   (SELECT SUM(size) FROM rcloneitem rci2 WHERE rci2.path LIKE rci1.path || "/%") AS dir_size
+   (SELECT SUM(size) FROM rcloneitem rci2 WHERE rci1.is_dir AND rci2.path LIKE ? AND rci2.path LIKE rci1.path || "/%") AS dir_size
    FROM rcloneitem rci1
-   WHERE path = ? || name"#, path)?)
+   WHERE path = ? || name"#, format!("{}%", path), path)?)
  }
 }
 
