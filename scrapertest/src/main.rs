@@ -576,34 +576,31 @@ async fn main() -> anyhow::Result<()> {
  // info!("inserted!");
  // return Ok(());
 
- info!("reading!");
- let items: Vec<RcloneItem> = select!(Vec<RcloneItem>)?;
- info!("read! {}", items.len());
+ // info!("reading!");
+ // let items: Vec<RcloneItem> = select!(Vec<RcloneItem>)?;
+ // info!("read! {}", items.len());
+ // let mut max_file_id = select!(i64 "MAX(rowid) FROM fileknowledge").unwrap_or(1);
+ // info!("max_file_id! {}", max_file_id);
 
- let mut max_file_id = select!(i64 "MAX(rowid) FROM fileknowledge").unwrap_or(1);
+ // execute!("BEGIN TRANSACTION")?;
 
- info!("max_file_id! {}", max_file_id);
+ // items.iter().map(|item| {
+ //  if item.size.clone().ok()?.as_i64() > 0 {
+ //   max_file_id += 1;
+ //   execute!(
+ //    r#"INSERT INTO fileknowledge (file_id, kind, value) VALUES (?, "name", ?), (?, "size", ?), (?, "localid", ?)"#,
+ //    max_file_id, item.name,
+ //    max_file_id, item.size,
+ //    max_file_id, item.id
+ //   )?;
+ //  }
+ //  Ok(())
+ // }).collect::<anyhow::Result<Vec<()>>>()?;
 
+ // execute!("COMMIT")?;
+
+ // info!("committed!");
  // return Ok(());
-
- execute!("BEGIN TRANSACTION")?;
-
- items.iter().map(|item| {
-  if item.size.clone().ok()?.as_i64() > 0 {
-   max_file_id += 1;
-   execute!(
-    r#"INSERT INTO fileknowledge (file_id, kind, value) VALUES (?, "name", ?), (?, "size", ?), (?, "localid", ?)"#,
-    max_file_id, item.name,
-    max_file_id, item.size,
-    max_file_id, item.id
-   )?;
-  }
-  Ok(())
- }).collect::<anyhow::Result<Vec<()>>>()?;
-
- execute!("COMMIT")?;
-
- info!("committed!");
 
  let opts = Opts::parse();
  let authorization = Box::leak(format!("Bearer {}", opts.password).into_boxed_str());
@@ -613,8 +610,8 @@ async fn main() -> anyhow::Result<()> {
  let conf_path =
   directories_next::BaseDirs::new().unwrap().home_dir().join(".config/rclone/rclone.conf");
 
- let config = std::fs::read_to_string(&conf_path)
-  .unwrap_or_else(|e| panic!("Something went wrong reading {:#?}: {}", conf_path, e));
+ let config = std::fs::read_to_string(&conf_path).unwrap_or_default();
+ // .unwrap_or_else(|e| panic!("Something went wrong reading {:#?}: {}", conf_path, e));
 
  let config = CString::new(config).unwrap();
  // let config = CString::new(select!(Rcloneconf)?.conf.unwrap()).unwrap();
