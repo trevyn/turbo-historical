@@ -809,7 +809,7 @@ const FileEntry2: FC<{ item: codegen.RcloneItemQueryResultItem }> = ({ item }) =
      </div>
      <div className="ml-4">
       <div className="text-sm leading-5 font-medium text-gray-700">{item.name}</div>
-      <div className="text-sm leading-5 text-gray-400 font-thin">
+      <div className="text-sm leading-5 text-gray-400 font-extralight">
        {item.size && item.size >= 0 && `${prettyBytes(item.size)}, `}
        {item.dirSize && `${prettyBytes(item.dirSize)}, `}
        {item.modTime &&
