@@ -246,7 +246,7 @@ export const SearchDocument = gql`
  *   },
  * });
  */
-export function useSearchQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<SearchQuery, SearchQueryVariables>) {
+export function useSearchQuery(baseOptions: ApolloReactHooks.QueryHookOptions<SearchQuery, SearchQueryVariables>) {
         return ApolloReactHooks.useQuery<SearchQuery, SearchQueryVariables>(SearchDocument, baseOptions);
       }
 export function useSearchLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<SearchQuery, SearchQueryVariables>) {
@@ -351,7 +351,7 @@ export const GetRcloneItemsDocument = gql`
  *   },
  * });
  */
-export function useGetRcloneItemsQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GetRcloneItemsQuery, GetRcloneItemsQueryVariables>) {
+export function useGetRcloneItemsQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GetRcloneItemsQuery, GetRcloneItemsQueryVariables>) {
         return ApolloReactHooks.useQuery<GetRcloneItemsQuery, GetRcloneItemsQueryVariables>(GetRcloneItemsDocument, baseOptions);
       }
 export function useGetRcloneItemsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GetRcloneItemsQuery, GetRcloneItemsQueryVariables>) {
