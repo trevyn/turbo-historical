@@ -897,19 +897,20 @@ async fn filedl_get_handler(
   info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
 
   let path = fullpath.as_str().trim_start_matches("/filedl/");
+  let path = urlencoding::decode(path)?;
 
-  let rcloneitem = select!(RcloneItem "WHERE path = ?", path).context(here!())?;
+  let rcloneitem = select!(RcloneItem "WHERE path = ?", &path).context(here!())?;
   let size = rcloneitem.size.unwrap().as_i64();
   let endbytepos = size - 1;
 
   let filecache =
    match select!(Option<FileCache> "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
-  path, 0, endbytepos)
+  &path, 0, endbytepos)
    .context(here!())?
    {
     Some(fc) => fc,
     None => {
-     let path_cstr = CString::new(path)?;
+     let path_cstr = CString::new(path.clone())?;
      info!("starting fetch, {} bytes", size);
      spawn_blocking(move || unsafe {
       GoFetchFiledata(path_cstr.as_ptr(), 0, endbytepos);

@@ -773,7 +773,7 @@ const FileEntry2: FC<{ item: codegen.RcloneItemQueryResultItem }> = ({ item }) =
     {/* <Link to={"/files/" + item.Path}> */}
     <div
      className="px-6 py-4 whitespace-no-wrap flex items-center"
-     onClick={async () => {
+     onClick={async e => {
       console.log("item.Path: " + item.path);
       // let key = "http://localhost:3020/listjson/" + item.Path.split("/").map(encodeURI).join("/");
 
@@ -784,7 +784,20 @@ const FileEntry2: FC<{ item: codegen.RcloneItemQueryResultItem }> = ({ item }) =
       //  JUST_FETCHED_KEY = key;
       // }
 
-      navigate("/files/" + item.path + "/");
+      if (item.isDir) {
+       navigate("/files/" + item.path + "/");
+      } else {
+       // is file
+       const anchor = document.createElement("a");
+
+       Object.assign(anchor, {
+        target: "_blank",
+        href: "http://localhost:3020/filedl/" + item.path,
+        rel: "noopener noreferrer",
+       }).click();
+
+       e.stopPropagation();
+      }
      }}
     >
      <div className="flex-shrink-0 h-10 w-10">
