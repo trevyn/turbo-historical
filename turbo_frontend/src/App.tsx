@@ -22,16 +22,18 @@ const apollo = new ApolloClient({
 });
 
 const ConstructionComponent: FC = () => (
- <div className="relative pt-7/12">
-  <ReactPlayer
-   className="absolute top-0 left-0"
-   width="100%"
-   height="100%"
-   playing={true}
-   controls={true}
-   light={false}
-   url="http://localhost:3020/filedl/archive2/weird/halu.mp4"
-  />
+ <div className="pt-7">
+  <div className="relative pt-9/16">
+   <ReactPlayer
+    className="absolute top-0 left-0"
+    width="100%"
+    height="100%"
+    playing={true}
+    controls={true}
+    light={false}
+    url="http://localhost:3020/filedl/archive2/weird/halu.mp4"
+   />
+  </div>
  </div>
 );
 

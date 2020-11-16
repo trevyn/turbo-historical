@@ -6,6 +6,10 @@ video {
  outline: none;
 }
 
+.pt-9\/16 {
+ padding-top: 56.25%;
+}
+
 /* from the server; putting utility css classes in a server response feels weird */
 .search-highlight {
  @apply bg-yellow-100;
