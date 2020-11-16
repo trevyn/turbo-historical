@@ -630,7 +630,7 @@ const FilesComponent: FC = () => {
 
  const { data, error } = codegen.useGetRcloneItemsQuery({
   variables: {
-   path,
+   path: decodeURI(path),
   },
  });
 
