@@ -27,11 +27,11 @@ jobs:
         working-directory: 'turbo_frontend'
 
       - name: cargo test turbosql_macros
-        run: cargo test --features "test"
+        run: cargo test --features "test" -- --nocapture
         working-directory: 'turbosql_macros'
 
       - name: cargo test turbosql
-        run: cargo test --features "test"
+        run: cargo test --features "test" -- --nocapture
         working-directory: 'turbosql'
 
       - uses: actions/setup-go@v2
@@ -46,7 +46,7 @@ jobs:
         run: ./build-turbo.sh
         working-directory: 'rclone'
 
-      - name: cargo test scrapertest
+      - name: cargo test scrapertest -- --nocapture
         run: cargo test
         working-directory: 'scrapertest'        
 

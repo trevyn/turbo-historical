@@ -2,7 +2,7 @@ use turbosql::{select, Blob, Turbosql};
 
 #[derive(Turbosql, Default, Debug)]
 struct Person {
- rowid: Option<i64>, // rowid member required & enforced at compile time
+ rowid: Option<i64>,
  name: Option<String>,
  age: Option<i64>,
  image_jpg: Option<Blob>,
