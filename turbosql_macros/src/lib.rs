@@ -46,6 +46,7 @@ mod select;
 //  }
 // }
 
+#[derive(Debug, Clone)]
 struct Table {
  ident: Ident,
  span: Span,
@@ -66,18 +67,20 @@ impl ToTokens for Table {
  }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Column {
  ident: Ident,
  span: Span,
  name: String,
- sqltype: &'static str,
+ rust_type: String,
+ sql_type: &'static str,
 }
 
 #[derive(Debug)]
 struct MiniColumn {
  name: String,
- sqltype: &'static str,
+ rust_type: String,
+ sql_type: &'static str,
 }
 
 // static TEST_DB: Lazy<Mutex<Connection>> =
@@ -137,7 +140,7 @@ impl Parse for QueryParams {
 #[derive(Clone, Debug)]
 struct ResultType {
  container: Option<Ident>,
- contents: Ident,
+ contents: Option<Ident>,
 }
 
 // impl Parse for ResultType {
@@ -164,25 +167,6 @@ impl MembersAndCasters {
   Self { members, struct_members, row_casters }
  }
 }
-
-// fn extract_explicit_members(sql: &str) -> MembersAndCasters {
-//  let members: Vec<_> = onig::Regex::new(
-//   r"(?<!.*\s[Ff][Rr][Oo][Mm]\s.*)[a-zA-Z_][a-zA-Z_0-9]*_(String|f64|i64|i32|bool)",
-//  )
-//  .unwrap()
-//  .captures_iter(&sql.replace("\n", " ")) // Newlines break the lookbehind
-//  .enumerate()
-//  .map(|(i, cap)| {
-//   let col_name = cap.at(0).unwrap();
-//   let mut parts: Vec<_> = col_name.split("_").collect();
-//   let ty = parts.pop().unwrap();
-//   let name = parts.join("_");
-//   (format_ident!("{}", name), format_ident!("{}", ty), i)
-//  })
-//  .collect();
-
-//  MembersAndCasters::create(members)
-// }
 
 fn extract_explicit_members(columns: &[String]) -> Option<MembersAndCasters> {
  // let members: Vec<_> = columns
@@ -399,15 +383,18 @@ fn do_parse_tokens(
         let contents_segment = segments.first().unwrap();
         ResultType {
          container: Some(segment.ident.clone()),
-         contents: contents_segment.ident.clone(),
+         contents: Some(contents_segment.ident.clone()),
         }
        }
-       _ => abort_call_site!("No segments found for container type"),
+       syn::GenericArgument::Type(syn::Type::Infer(_)) => {
+        ResultType { container: Some(segment.ident.clone()), contents: None }
+       }
+       _ => abort_call_site!("No segments found for container type {:#?}", arg),
       }
      }
      _ => abort_call_site!("No arguments found for container type"),
     },
-    _ => ResultType { container: None, contents: segment.ident.clone() },
+    _ => ResultType { container: None, contents: Some(segment.ident.clone()) },
    })
   }
   Some(_) => abort_call_site!("Could not parse result_type"),
@@ -416,12 +403,13 @@ fn do_parse_tokens(
 
  eprintln!("{:?}, {:?}, {:?}", result_type, sql, stmt_info);
 
- // Try adding SELECT ... FROM if it didn't still validate and we have a result type
+ // If it didn't still validate and we have a non-inferred result type, try adding SELECT ... FROM
 
  let (sql, stmt_info) = match (result_type.clone(), sql, stmt_info) {
-  (Some(result_type), sql, None) => {
-   // result type and no statement info, try new sql
-   let result_type = result_type.contents.to_string();
+  //
+  // Have result type and SQL did not validate, try generating SELECT ... FROM
+  (Some(ResultType { contents: Some(contents), .. }), sql, None) => {
+   let result_type = contents.to_string();
    let table_name = result_type.to_lowercase();
    let tables = TABLES.lock().unwrap();
    let table = tables.get(&table_name).unwrap_or_else(|| {
@@ -440,11 +428,18 @@ fn do_parse_tokens(
 
    (sql.clone(), validate_sql_or_abort(sql))
   }
+
+  // Otherwise, everything is validated, just unwrap
   (_, Some(sql), Some(stmt_info)) => (sql, stmt_info),
+
   _ => abort_call_site!("no predicate and no result type found"),
  };
 
  eprintln!("{:?} {:?}, {:?}", &result_type, sql, stmt_info);
+
+ // try parse sql here with nom-sql
+
+ eprintln!("NOM_SQL: {:#?}", nom_sql::parser::parse_query(&sql));
 
  // pull explicit members from statement info
 
@@ -530,7 +525,9 @@ fn do_parse_tokens(
  let tokens = match result_type {
   //
   // Vec
-  Some(ResultType { container: Some(container), contents }) if container == "Vec" => {
+  Some(ResultType { container: Some(container), contents: Some(contents) })
+   if container == "Vec" =>
+  {
    let m = stmt_info
     .membersandcasters()
     .unwrap_or_else(|_| abort_call_site!("stmt_info.membersandcasters failed"));
@@ -558,7 +555,9 @@ fn do_parse_tokens(
   }
 
   // Option
-  Some(ResultType { container: Some(container), contents }) if container == "Option" => {
+  Some(ResultType { container: Some(container), contents: Some(contents) })
+   if container == "Option" =>
+  {
    let m = stmt_info
     .membersandcasters()
     .unwrap_or_else(|_| abort_call_site!("stmt_info.membersandcasters failed"));
@@ -586,7 +585,7 @@ fn do_parse_tokens(
   }
 
   // Primitive type
-  Some(ResultType { container: None, contents })
+  Some(ResultType { container: None, contents: Some(contents) })
    if ["i64", "bool"].contains(&&contents.to_string().as_str()) =>
   {
    quote! {
@@ -604,7 +603,7 @@ fn do_parse_tokens(
   }
 
   // Custom struct type
-  Some(ResultType { container: None, contents }) => {
+  Some(ResultType { container: None, contents: Some(contents) }) => {
    let m = stmt_info
     .membersandcasters()
     .unwrap_or_else(|_| abort_call_site!("stmt_info.membersandcasters failed"));
@@ -627,7 +626,8 @@ fn do_parse_tokens(
    }
   }
 
-  // Some(ResultType { container: None, .. }) => quote! {},
+  // Inferred
+  Some(ResultType { container: Some(container), contents: None }) => abort_call_site!("INFERRED"),
   _ => abort_call_site!("unknown result_type"),
  };
 
@@ -694,15 +694,19 @@ pub fn turbosql_derive_macro(input: proc_macro::TokenStream) -> proc_macro::Toke
  };
 
  let minitable = MiniTable {
-  name: table_name,
+  name: table_name.clone(),
   columns: table
    .columns
    .iter()
-   .map(|c| MiniColumn { name: c.name.clone(), sqltype: c.sqltype })
+   .map(|c| MiniColumn {
+    name: c.name.clone(),
+    sql_type: c.sql_type,
+    rust_type: c.rust_type.clone(),
+   })
    .collect(),
  };
 
- TABLES.lock().unwrap().insert(minitable.name.clone(), minitable);
+ TABLES.lock().unwrap().insert(table_name, minitable);
 
  // create trait functions
 
@@ -760,7 +764,7 @@ fn extract_columns(fields: &FieldsNamed) -> Vec<Column> {
    // specifically, sqlite cannot represent u64 integers, would be coerced to float.
    // https://sqlite.org/fileformat.html
 
-   let sqltype = match (name.as_str(), ty_str.as_str()) {
+   let sql_type = match (name.as_str(), ty_str.as_str()) {
     ("rowid", "Option < i64 >") => "INTEGER PRIMARY KEY",
     // (_, "i64") => "INTEGER NOT NULL",
     (_, "Option < i8 >") => "INTEGER",
@@ -785,7 +789,13 @@ fn extract_columns(fields: &FieldsNamed) -> Vec<Column> {
     _ => abort!(ty, "turbosql doesn't support rust type: {}", ty_str),
    };
 
-   Some(Column { ident: ident.clone().unwrap(), span: ty.span(), name, sqltype })
+   Some(Column {
+    ident: ident.clone().unwrap(),
+    span: ty.span(),
+    rust_type: ty_str,
+    name,
+    sql_type,
+   })
   })
   .collect::<Vec<_>>();
 
@@ -795,7 +805,7 @@ fn extract_columns(fields: &FieldsNamed) -> Vec<Column> {
 
  if !matches!(
   columns.iter().find(|c| c.name == "rowid"),
-  Some(Column { sqltype: "INTEGER PRIMARY KEY", .. })
+  Some(Column { sql_type: "INTEGER PRIMARY KEY", .. })
  ) {
   abort_call_site!("derive(Turbosql) structs must include a 'rowid: Option<i64>' field")
  };

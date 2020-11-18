@@ -258,8 +258,6 @@ struct RcloneItem {
  mime_type: Option<String>,
  mod_time: Option<String>,
  is_dir: Option<bool>,
- // #[turbosql(skip)]
- // dir_size: Option<i53>,
 }
 
 #[derive(GraphQLObject, Clone, Debug)]
@@ -899,6 +897,9 @@ async fn filedl_get_handler(
   let rcloneitem = select!(RcloneItem "WHERE path = ?", &path).context(here!())?;
   let size = rcloneitem.size.unwrap().as_i64();
   let endbytepos = size - 1;
+
+  // let cached_ranges =
+  //  select!(Vec<_> "startbytepos, endbytepos FROM filecache WHERE cachekey = ?", &path);
 
   let filecache =
    match select!(Option<FileCache> "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",

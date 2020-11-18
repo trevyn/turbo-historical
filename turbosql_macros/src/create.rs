@@ -14,7 +14,7 @@ pub(super) fn create(table: &Table) -> proc_macro2::TokenStream {
  let sql = makesql_create(&table);
 
  rusqlite::Connection::open_in_memory().unwrap().execute(&sql, params![]).unwrap_or_else(|e| {
-  abort_call_site!("Error validating auto-generated CREATE TABLE statement:\n{}\n{:#?}", sql, e)
+  abort_call_site!("Error validating auto-generated CREATE TABLE statement: {} {:#?}", sql, e)
  });
 
  let target_migrations = make_migrations(&table);
@@ -90,19 +90,11 @@ pub(super) fn create(table: &Table) -> proc_macro2::TokenStream {
 }
 
 fn makesql_create(table: &Table) -> String {
- let mut sql = format!("CREATE TABLE {} (\n", table.name);
-
- sql += table
-  .columns
-  .iter()
-  .map(|c| format!(" {} {}", c.name, c.sqltype))
-  .collect::<Vec<_>>()
-  .join(",\n")
-  .as_str();
-
- sql += "\n)";
-
- sql
+ format!(
+  "CREATE TABLE {} ({})",
+  table.name,
+  table.columns.iter().map(|c| format!("{} {}", c.name, c.sql_type)).collect::<Vec<_>>().join(",")
+ )
 }
 
 fn make_migrations(table: &Table) -> Vec<String> {
@@ -111,9 +103,9 @@ fn make_migrations(table: &Table) -> Vec<String> {
  let mut alters = table
   .columns
   .iter()
-  .filter_map(|c| match (c.name.as_str(), c.sqltype) {
+  .filter_map(|c| match (c.name.as_str(), c.sql_type) {
    ("rowid", "INTEGER PRIMARY KEY") => None,
-   _ => Some(format!("ALTER TABLE {} ADD COLUMN {} {}", table.name, c.name, c.sqltype)),
+   _ => Some(format!("ALTER TABLE {} ADD COLUMN {} {}", table.name, c.name, c.sql_type)),
   })
   .collect::<Vec<_>>();
 
