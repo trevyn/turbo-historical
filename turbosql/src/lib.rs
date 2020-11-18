@@ -83,20 +83,25 @@ static __DB_PATH: Lazy<Mutex<DbPath>> = Lazy::new(|| {
   Err(_) => None,
  };
 
- Mutex::new(DbPath {
-  path: Path::new(&match cur_exe {
-   Some(name) => format!("{}.sqlite", name),
-   None => "turbosql.sqlite".to_owned(),
-  })
-  .to_owned(),
-  opened: false,
- })
+ #[cfg(feature = "test")]
+ let path_str = ":memory:".to_owned();
+ #[cfg(not(feature = "test"))]
+ let path_str = match cur_exe {
+  Some(name) => format!("{}.sqlite", name),
+  None => "turbosql.sqlite".to_owned(),
+ };
+
+ Mutex::new(DbPath { path: Path::new(&path_str).to_owned(), opened: false })
 });
 
 #[doc(hidden)]
 pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
+ #[cfg(not(feature = "test"))]
  let toml_decoded: MigrationsToml = toml::from_str(include_str!("../../migrations.toml"))
   .expect("Unable to decode embedded migrations.toml");
+ #[cfg(feature = "test")]
+ let toml_decoded: MigrationsToml =
+  toml::from_str(include_str!("../../test.migrations.toml")).unwrap();
 
  let target_migrations = toml_decoded.migrations_append_only.unwrap_or_else(Vec::new);
 
@@ -167,7 +172,11 @@ pub static __TURBOSQL_DB: Lazy<Mutex<Connection>> = Lazy::new(|| {
  // execute migrations
 
  applied_migrations.iter().zip_longest(&target_migrations).for_each(|item| match item {
-  Both(a, b) => assert!(a == b),
+  Both(a, b) => {
+   if a != b {
+    panic!("Mismatch in Turbosql migrations!")
+   }
+  }
   Left(_) => panic!("More migrations are applied than target"),
   Right(migration) => {
    eprintln!("insert -> {:#?}", migration);
