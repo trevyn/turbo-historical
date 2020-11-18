@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
+      - run: mkdir build
+        working-directory: 'turbo_frontend'
+
       - name: cargo test turbosql_macros
         run: cargo test --features "test"
         working-directory: 'turbosql_macros'
