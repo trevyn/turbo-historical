@@ -15,6 +15,24 @@ env:
 
 jobs:
 
+  test:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: cargo test turbosql_macros
+        run: cargo test --features "test"
+        working-directory: 'turbosql_macros'
+
+      - name: cargo test turbosql
+        run: cargo test --features "test"
+        working-directory: 'turbosql'
+
+      - name: cargo test scrapertest
+        run: cargo test
+        working-directory: 'scrapertest'        
+
   build:
     runs-on: ${{ matrix.os }}
 
@@ -46,18 +64,6 @@ jobs:
         working-directory: 'rclone'
     
       - run: cargo build --release --verbose
-        working-directory: 'scrapertest'
-
-      - name: cargo test turbosql_macros
-        run: cargo test --features "test"
-        working-directory: 'turbosql_macros'
-
-      - name: cargo test turbosql
-        run: cargo test --features "test"
-        working-directory: 'turbosql'
-
-      - name: cargo test scrapertest
-        run: cargo test
         working-directory: 'scrapertest'
 
       - uses: actions/upload-artifact@v2
