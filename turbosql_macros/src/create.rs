@@ -5,7 +5,10 @@ use rusqlite::params;
 use serde::Serialize;
 use std::fs;
 
+#[cfg(not(feature = "test"))]
 const MIGRATIONS_FILENAME: &str = "migrations.toml";
+#[cfg(feature = "test")]
+const MIGRATIONS_FILENAME: &str = "test.migrations.toml";
 
 /// CREATE TABLE
 pub(super) fn create(table: &Table) -> proc_macro2::TokenStream {

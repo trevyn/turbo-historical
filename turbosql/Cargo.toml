@@ -20,3 +20,6 @@ rusqlite = {version = "0.24.1", features = ["bundled", "blob"]}
 serde = {version = "1.0.117", features = ["derive"]}
 toml = "0.5.7"
 turbosql_macros = {path = "../turbosql_macros"}
+
+[features]
+test = ["turbosql_macros/test"]

@@ -21,7 +21,10 @@ use syn::{
  Token, Type,
 };
 
+#[cfg(not(feature = "test"))]
 const MIGRATIONS_FILENAME: &str = "migrations.toml";
+#[cfg(feature = "test")]
+const MIGRATIONS_FILENAME: &str = "test.migrations.toml";
 
 mod create;
 mod insert;

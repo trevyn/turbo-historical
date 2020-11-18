@@ -41,14 +41,24 @@ jobs:
       
       - run: go1.15.2 download
 
-      - name: build rclone lib
+      - name: Build rclone lib
         run: ./build-turbo.sh
         working-directory: 'rclone'
     
       - run: cargo build --release --verbose
         working-directory: 'scrapertest'
 
-      - run: cargo test --verbose
+      - name: cargo test turbosql_macros
+        run: cargo test --features "test"
+        working-directory: 'turbosql_macros'
+
+      - name: cargo test turbosql
+        run: cargo test --features "test"
+        working-directory: 'turbosql'
+
+      - name: cargo test scrapertest
+        run: cargo test
+        working-directory: 'scrapertest'
 
       - uses: actions/upload-artifact@v2
         with:

@@ -21,3 +21,7 @@ rusqlite = {version = "0.24.1", features = ["bundled", "blob", "column_decltype"
 serde = {version = "1.0.117", features = ["derive"]}
 syn = {version = "1.0.48", features = ["extra-traits", "full"]}
 toml = "0.5.7"
+
+[features]
+# See: https://github.com/rust-lang/rust/issues/45599
+test = []
