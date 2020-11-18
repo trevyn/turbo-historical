@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
       
       - run: mkdir build
         working-directory: 'turbo_frontend'
@@ -31,6 +33,18 @@ jobs:
       - name: cargo test turbosql
         run: cargo test --features "test"
         working-directory: 'turbosql'
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.15.2'
+      
+      - run: go get golang.org/dl/go1.15.2
+      
+      - run: go1.15.2 download
+
+      - name: Build rclone lib
+        run: ./build-turbo.sh
+        working-directory: 'rclone'
 
       - name: cargo test scrapertest
         run: cargo test
