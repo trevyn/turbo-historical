@@ -83,10 +83,13 @@ jobs:
       - run: cargo build --release --verbose
         working-directory: 'scrapertest'
 
+      - run: brotli -v scrapertest
+        working-directory: 'target/release'
+
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: target/release/scrapertest
+          path: target/release/scrapertest.br
 
         
   release:
@@ -98,12 +101,6 @@ jobs:
           fetch-depth: 0
 
       - uses: actions/download-artifact@v2
-
-      - run: brotli -v scrapertest
-        working-directory: 'ubuntu-18.04'
-
-      - run: brotli -v scrapertest
-        working-directory: 'macos-10.15'
 
       - id: vars
         run: echo "::set-output name=sha::$(echo $(date '+%y%m%d-%H%M')-${GITHUB_SHA:0:7})"
