@@ -57,39 +57,39 @@ macro_rules! here {
 #[folder = "../turbo_frontend/build"]
 struct Asset;
 
-#[cfg(test)]
-mod tests {
- use super::*;
+// #[cfg(test)]
+// mod tests {
+//  use super::*;
 
- #[test]
- fn test_go_listjson() {
-  // let start = Instant::now();
+// #[test]
+// fn test_go_listjson() {
+//  let start = Instant::now();
 
-  eprintln!("testing");
+//  eprintln!("testing");
 
-  let config = CString::new("").unwrap(); // rclone.conf
-  unsafe {
-   GoSetConfig(config.as_ptr());
-  }
+//  let config = CString::new("").unwrap(); // rclone.conf
+//  unsafe {
+//   GoSetConfig(config.as_ptr());
+//  }
 
-  let path = "".to_owned();
-  let cstring = CString::new(path).unwrap();
+//  let path = "".to_owned();
+//  let cstring = CString::new(path).unwrap();
 
-  unsafe {
-   GoListJSON(cstring.as_ptr());
-  }
+//  unsafe {
+//   GoListJSON(cstring.as_ptr());
+//  }
 
-  // turbosql::execute(
-  //  "DELETE from file WHERE refresh_pending_verify = true AND origin_parent_path = ?",
-  //  params![path],
-  // )
-  // .unwrap();
+// turbosql::execute(
+//  "DELETE from file WHERE refresh_pending_verify = true AND origin_parent_path = ?",
+//  params![path],
+// )
+// .unwrap();
 
-  // eprintln!("the file is {:#?}", files.iter().filter_map(|f| f.path.clone()).collect::<Vec<_>>());
+// eprintln!("the file is {:#?}", files.iter().filter_map(|f| f.path.clone()).collect::<Vec<_>>());
 
-  // eprintln!("test_go_listjson complete in {}!", format!("{:.2?}", start.elapsed()).green().bold());
- }
-}
+// eprintln!("test_go_listjson complete in {}!", format!("{:.2?}", start.elapsed()).green().bold());
+//  }
+// }
 
 /// Receive an array of File entries from Go and insert into turbosql
 /// # Safety

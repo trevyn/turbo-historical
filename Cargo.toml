@@ -3,7 +3,6 @@ members = [
   "scrapertest",
   "turbosql",
   "turbosql_macros",
-  "monolith_wrapper",
 ]
 
 [profile.release]

@@ -5,12 +5,12 @@ WORK IN PROGRESS, use at your own risk. :)
 Macros for easily persisting Rust `struct`s to an on-disk SQLite database and later retrieving them, optionally based on your own predicates.
 
 ```rust
-use turbosql::Turbosql;
+use turbosql::{Turbosql, Blob};
 
-[derive(Turbosql)]
+#[derive(Turbosql, Default)]
 struct Person {
  rowid: Option<i64>,  // rowid member required & enforced at compile time
- name: String,
+ name: Option<String>,
  age: Option<i64>,
  image_jpg: Option<Blob>
 }

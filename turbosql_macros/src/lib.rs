@@ -1,14 +1,5 @@
 //! This crate provides Turbosql's procedural macros.
 //!
-//! ```edition2018
-//! # use turbosql::Turbosql;
-//! #
-//! #[derive(Turbosql)]
-//! # struct S;
-//! #
-//! # fn main() {}
-//! ```
-//!
 //! Please refer to the `turbosql` crate for how to set this up.
 
 // #![allow(unused_imports)]
