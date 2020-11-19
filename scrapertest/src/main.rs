@@ -563,10 +563,10 @@ async fn main() -> anyhow::Result<()> {
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");
 
- trace!("trace enabled");
- debug!("debug enabled");
- info!("info enabled");
  warn!("warn enabled");
+ info!("info enabled");
+ debug!("debug enabled");
+ trace!("trace enabled");
 
  // info!("reading files!");
  // let contents = std::fs::read_to_string("/Users/eden/gcrypt.json")?;
