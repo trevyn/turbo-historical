@@ -1,6 +1,5 @@
 module.exports = {
  purge: {
-  // mode: "all",
   content: [
    "./src/**/*.html",
    "./src/**/*.js",
@@ -9,9 +8,6 @@ module.exports = {
    "./src/**/*.tsx",
    "./public/**/*.html",
   ],
-  // options: {
-  //  whitelist: ["textarea"],
-  // },
  },
  theme: {
   extend: {
@@ -27,10 +23,7 @@ module.exports = {
   removeDeprecatedGapUtilities: true,
   purgeLayersByDefault: true,
   standardFontWeights: true,
-  // defaultLineHeights: true,
+  defaultLineHeights: true,
  },
- // experimental: {
- //  uniformColorPalette: true,
- // },
  plugins: [require("@tailwindcss/ui")],
 };

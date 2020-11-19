@@ -526,7 +526,7 @@ const ResultsComponent: FC<{
       </div>
       <div>
        <div
-        className="block pt-0.5 text-gray-600 group-hover:underline text-lg font-medium"
+        className="block pt-0.5 text-gray-600 group-hover:underline text-lg leading-normal font-medium"
         dangerouslySetInnerHTML={{ __html: item.title }}
         // rel="noopener noreferrer"
         // target="_blank"
@@ -540,13 +540,13 @@ const ResultsComponent: FC<{
        ></div>
        <div>
         <span
-         className="text-sm text-green-500"
+         className="text-sm leading-normal text-green-500"
          dangerouslySetInnerHTML={{
           __html: "searchHighlightedUrl" in item ? item.searchHighlightedUrl : item.url,
          }}
         ></span>
         <span
-         className="pl-4 text-sm text-gray-500 hover:text-gray-700 underline"
+         className="pl-4 text-sm leading-normal text-gray-500 hover:text-gray-700 underline"
          onClick={(e: SyntheticEvent) => {
           console.log("inner");
           if (item.url) {
@@ -567,10 +567,10 @@ const ResultsComponent: FC<{
         </span>
        </div>
        <div
-        className="text-sm text-gray-500"
+        className="text-sm leading-normal text-gray-500"
         dangerouslySetInnerHTML={{ __html: item.snippet }}
        ></div>
-       <div className="text-sm text-gray-300">
+       <div className="text-sm leading-normal text-gray-300">
         {"rank" in item ? `Rank ${item.rank.toFixed(2)}` : ""}
        </div>
       </div>
@@ -758,8 +758,8 @@ const FilesComponent: FC = () => {
      </div>
     </div>
    </div>
-   <div className="pt-96 clearfix"></div>
-   <div className="pt-96 clearfix">{JSON.stringify(data)}</div>
+   <div className="pt-96 flow-root"></div>
+   <div className="pt-96 flow-root">{JSON.stringify(data)}</div>
   </>
  );
 };
