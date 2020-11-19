@@ -26,6 +26,7 @@ use warp::Filter;
 use bytes::Bytes;
 use futures::stream::Stream;
 use futures::task::Poll;
+use headers::HeaderMapExt;
 // use tokio::io::AsyncRead;
 // use tokio::prelude::*;
 // use tokio_util::codec;
@@ -890,6 +891,10 @@ async fn filedl_get_handler(
 ) -> Result<impl warp::Reply, warp::Rejection> {
  match async {
   info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
+
+  if let Some(range) = headers.typed_get::<headers::Range>() {
+   info!("RANGE IS {:#?}", range.iter().collect::<Vec<_>>());
+  }
 
   let path = fullpath.as_str().trim_start_matches("/filedl/");
   let path = urlencoding::decode(path)?;
