@@ -1,5 +1,11 @@
 use anyhow::Context;
+use bytes::Bytes;
 use clap::Clap;
+use core::ops::Bound::{Included, Unbounded};
+use futures::stream::Stream;
+use futures::task::Poll;
+use headers::Header;
+use headers::HeaderMapExt;
 use juniper::{graphql_object, EmptySubscription, FieldResult, GraphQLObject};
 use log::{debug, error, info, trace, warn};
 use once_cell::sync::Lazy;
@@ -7,6 +13,8 @@ use reqwest::header;
 use scraper::{Html, Selector};
 use serde::Deserialize;
 use std::convert::Infallible;
+use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::io::prelude::*;
 use std::os::raw::{c_char, c_longlong, c_uchar};
 use std::sync::Mutex;
@@ -22,11 +30,6 @@ use turbosql::{execute, select, Blob, Turbosql};
 use url::Url;
 use warp::http::{HeaderMap, Method};
 use warp::Filter;
-
-use bytes::Bytes;
-use futures::stream::Stream;
-use futures::task::Poll;
-use headers::HeaderMapExt;
 // use tokio::io::AsyncRead;
 // use tokio::prelude::*;
 // use tokio_util::codec;
@@ -892,21 +895,25 @@ async fn filedl_get_handler(
  match async {
   info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
 
-  if let Some(range) = headers.typed_get::<headers::Range>() {
-   info!("RANGE IS {:#?}", range.iter().collect::<Vec<_>>());
-  }
+  let range = if let Some(range) = headers.typed_get::<headers::Range>() {
+   Some(range.iter().collect::<Vec<_>>())
+  } else {
+   None
+  };
+
+  info!("RANGE IS {:#?}", &range);
 
   let path = fullpath.as_str().trim_start_matches("/filedl/");
   let path = urlencoding::decode(path)?;
 
-  let rcloneitem = select!(RcloneItem "WHERE path = ?", &path).context(here!())?;
+  let rcloneitem: RcloneItem = select!(RcloneItem "WHERE path = ?", &path).context(here!())?;
   let size = rcloneitem.size.unwrap().as_i64();
   let endbytepos = size - 1;
 
   // let cached_ranges =
   //  select!(Vec<_> "startbytepos, endbytepos FROM filecache WHERE cachekey = ?", &path);
 
-  let filecache =
+  let filecache: FileCache =
    match select!(Option<FileCache> "WHERE cachekey = ? AND startbytepos = ? AND endbytepos = ?",
   &path, 0, endbytepos)
    .context(here!())?
@@ -928,15 +935,41 @@ async fn filedl_get_handler(
 
   info!("{:#?}", rcloneitem.mime_type);
 
-  Ok(
-   warp::http::Response::builder()
-    // .header("content-type", "video/webm")
-    .header("content-type", rcloneitem.mime_type.context(here!())?)
-    .header("content-length", size)
-    .header("accept-ranges", "bytes")
-    // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
-    .body(filecache.bytes.context(here!())?),
-  )
+  // if this is a range request, return just that range
+
+  // let range = range.unwrap_or_default().first();
+
+  if let Some((Included(startbyte), Unbounded)) = range.unwrap_or_default().first() {
+   let mut content_ranges: Vec<headers::HeaderValue> = Vec::new();
+   headers::ContentRange::bytes(*startbyte as u64..=size as u64 - 1, size as u64)
+    .unwrap()
+    .encode(&mut content_ranges);
+
+   eprintln!("content_ranges IS {:#?}", content_ranges);
+   eprintln!("content-length IS {}", size - i64::try_from(*startbyte)?);
+
+   Ok(
+    warp::http::Response::builder()
+     .status(206) // HTTP/1.1 206 Partial Content
+     .header("content-type", rcloneitem.mime_type.context(here!())?)
+     .header("content-length", size - i64::try_from(*startbyte)?)
+     .header("accept-ranges", "bytes")
+     .header("content-range", content_ranges.first().unwrap())
+     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
+     .body(filecache.bytes.context(here!())?[*startbyte as usize..].to_owned()),
+   )
+  } else {
+   // otherwise return the whole file
+   Ok(
+    warp::http::Response::builder()
+     .header("content-type", rcloneitem.mime_type.context(here!())?)
+     .header("content-length", size)
+     .header("accept-ranges", "bytes")
+     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
+     // .body(filecache.bytes.context(here!())?),
+     .body(filecache.bytes.context(here!())?[0..].to_owned()),
+   )
+  }
  }
  .await
  {
