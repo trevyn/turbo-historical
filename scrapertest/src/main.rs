@@ -895,11 +895,7 @@ async fn filedl_get_handler(
  match async {
   info!("filedl_get_handler {:#?} {:#?}", headers, fullpath);
 
-  let range = if let Some(range) = headers.typed_get::<headers::Range>() {
-   Some(range.iter().collect::<Vec<_>>())
-  } else {
-   None
-  };
+  let range = headers.typed_get::<headers::Range>().map(|r| r.iter().collect::<Vec<_>>());
 
   info!("RANGE IS {:#?}", &range);
 
