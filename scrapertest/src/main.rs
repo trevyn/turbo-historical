@@ -935,37 +935,37 @@ async fn filedl_get_handler(
 
   // let range = range.unwrap_or_default().first();
 
-  if let Some((Included(startbyte), Unbounded)) = range.unwrap_or_default().first() {
-   let mut content_ranges: Vec<headers::HeaderValue> = Vec::new();
-   headers::ContentRange::bytes(*startbyte as u64..=size as u64 - 1, size as u64)
-    .unwrap()
-    .encode(&mut content_ranges);
+  let builder = warp::http::Response::builder()
+   .header("content-type", rcloneitem.mime_type.context(here!())?)
+   .header("accept-ranges", "bytes");
 
-   eprintln!("content_ranges IS {:#?}", content_ranges);
-   eprintln!("content-length IS {}", size - i64::try_from(*startbyte)?);
+  let (builder, startbyte) = match range.unwrap_or_default().first() {
+   Some((Included(startbyte), Unbounded)) => {
+    let mut content_ranges: Vec<headers::HeaderValue> = Vec::new();
+    headers::ContentRange::bytes(*startbyte as u64..size as u64, size as u64)
+     .unwrap()
+     .encode(&mut content_ranges);
 
-   Ok(
-    warp::http::Response::builder()
+    eprintln!("content_ranges IS {:#?}", content_ranges);
+    eprintln!("content-length IS {}", size - i64::try_from(*startbyte)?);
+
+    let builder = builder
      .status(206) // HTTP/1.1 206 Partial Content
-     .header("content-type", rcloneitem.mime_type.context(here!())?)
      .header("content-length", size - i64::try_from(*startbyte)?)
-     .header("accept-ranges", "bytes")
-     .header("content-range", content_ranges.first().unwrap())
-     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
-     .body(filecache.bytes.context(here!())?[*startbyte as usize..].to_owned()),
-   )
-  } else {
-   // otherwise return the whole file
-   Ok(
-    warp::http::Response::builder()
-     .header("content-type", rcloneitem.mime_type.context(here!())?)
-     .header("content-length", size)
-     .header("accept-ranges", "bytes")
-     // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
-     // .body(filecache.bytes.context(here!())?),
-     .body(filecache.bytes.context(here!())?[0..].to_owned()),
-   )
-  }
+     .header("content-range", content_ranges.first().unwrap());
+
+    (builder, *startbyte)
+   }
+   None => {
+    // otherwise return the whole file
+    let builder = builder.header("content-length", size);
+    (builder, 0)
+   }
+   _ => panic!("Unknown byterange"),
+  };
+
+  // .body(warp::hyper::Body::wrap_stream(ByteStream(""))),
+  Ok(builder.body(filecache.bytes.context(here!())?[startbyte as usize..].to_owned()))
  }
  .await
  {
