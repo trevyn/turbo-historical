@@ -5,10 +5,13 @@ WORK IN PROGRESS, use at your own risk. :)
 Macros for easily persisting Rust `struct`s to an on-disk SQLite database and later retrieving them, optionally based on your own predicates.
 
 ```rust
+# #[cfg(not(feature = "test"))]
+# panic!("rustdoc must be run with '--features test'");
+
 use turbosql::{Turbosql, Blob};
 
 #[derive(Turbosql, Default)]
-struct Person {
+struct PersonDocTest {
  rowid: Option<i64>,  // rowid member required & enforced at compile time
  name: Option<String>,
  age: Option<i64>,

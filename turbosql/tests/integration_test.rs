@@ -1,7 +1,7 @@
 use turbosql::{select, Blob, Turbosql};
 
 #[derive(Turbosql, Default, Debug)]
-struct Person {
+struct PersonIntegrationTest {
  rowid: Option<i64>,
  name: Option<String>,
  age: Option<i64>,
@@ -10,9 +10,14 @@ struct Person {
 
 #[test]
 fn it_works() {
- Person { rowid: None, name: Some("Bob".to_string()), age: Some(42), image_jpg: None }
-  .insert()
-  .unwrap();
+ PersonIntegrationTest {
+  rowid: None,
+  name: Some("Bob".to_string()),
+  age: Some(42),
+  image_jpg: None,
+ }
+ .insert()
+ .unwrap();
 
- println!("{:#?}", select!(Vec<Person>));
+ println!("{:#?}", select!(Vec<PersonIntegrationTest>));
 }

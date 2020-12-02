@@ -23,3 +23,8 @@ turbosql_macros = {path = "../turbosql_macros"}
 
 [features]
 test = ["turbosql_macros/test"]
+
+[[test]]
+name = "integration_test"
+path = "tests/integration_test.rs"
+required-features = ["test"]
