@@ -16,12 +16,22 @@ env:
 jobs:
 
   test:
+    name: Test Rust ${{ matrix.rust }}
     runs-on: ubuntu-18.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, beta, nightly]
 
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: 'true'
+
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: ${{ matrix.rust }}
       
       - run: mkdir build
         working-directory: 'turbo_frontend'
