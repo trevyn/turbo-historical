@@ -1,4 +1,4 @@
-use turbosql::{select, Blob, Turbosql};
+use turbosql::{execute, select, Blob, Turbosql};
 
 #[derive(Turbosql, Default, Debug, PartialEq, Clone)]
 struct PersonIntegrationTest {
@@ -27,6 +27,15 @@ fn it_works() {
 
  assert!(select!(i64 "1").unwrap() == 1);
  assert!(select!(i64 "SELECT 1").unwrap() == 1);
+ assert!(
+  execute!("")
+   == Err(rusqlite::Error::SqliteFailure(
+    rusqlite::ffi::Error { code: rusqlite::ErrorCode::APIMisuse, extended_code: 21 },
+    Some("not an error".to_string()),
+   ))
+ );
+
+ // assert!(select!(Vec<i64> "SELECT 1").unwrap() == Some(1));
  // assert!(select!(Option<i64> "SELECT 1").unwrap() == Some(1));
 
  assert!(select!(PersonIntegrationTest).unwrap() == row);
@@ -45,6 +54,16 @@ fn it_works() {
  assert!(select!(Vec<PersonIntegrationTest> "WHERE age = 41").unwrap() == vec![]);
  assert!(select!(Option<PersonIntegrationTest> "WHERE age = 41").unwrap() == None);
 
- assert!(select!(i64 "age FROM personintegrationtest").unwrap() == row.age.unwrap());
  assert!(select!(i64 "SELECT age FROM personintegrationtest").unwrap() == row.age.unwrap());
+ assert!(select!(i64 "age FROM personintegrationtest").unwrap() == row.age.unwrap());
+ assert!(select!(i64 "age FROM personintegrationtest WHERE FALSE").is_err());
+ // assert!(select!(Vec<i64> "age FROM personintegrationtest").unwrap() == row.age.unwrap());
+ // assert!(select!(Option<i64> "age FROM personintegrationtest").unwrap() == row.age);
+ // assert!(select!(String "name FROM personintegrationtest").unwrap() == row.name.unwrap());
+}
+
+#[test]
+#[should_panic]
+fn it_panics() {
+ panic!("panic");
 }
