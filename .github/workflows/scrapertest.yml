@@ -16,7 +16,7 @@ env:
 jobs:
 
   test:
-    name: Test Rust ${{ matrix.rust }}
+    name: test rust ${{ matrix.rust }}
     runs-on: ubuntu-18.04
 
     strategy:
@@ -71,6 +71,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: 'true'
+
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: stable
       
       - run: npm install
         working-directory: 'turbo_frontend'
