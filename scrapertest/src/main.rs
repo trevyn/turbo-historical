@@ -562,6 +562,7 @@ fn anyhow_to_warp_rejection(err: anyhow::Error) -> warp::Rejection {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+ // @mark main
  // std::env::set_var("RUST_LOG", "trace");
  pretty_env_logger::init_timed();
  let warplog = warp::log("scrapertest");

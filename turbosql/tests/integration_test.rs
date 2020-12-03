@@ -8,6 +8,7 @@ struct PersonIntegrationTest {
  image_jpg: Option<Blob>,
 }
 
+// @test integration test
 #[test]
 fn it_works() {
  PersonIntegrationTest {

@@ -6,6 +6,7 @@ publish = false
 version = "0.0.0"
 
 [dependencies]
+# @deps scrapertest
 # ammonia = {path = "../ammonia"}
 # html5ever = "0.24.1"
 # maplit = "1.0.2"
