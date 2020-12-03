@@ -1,5 +1,5 @@
 {
- "//": "@apollo/client: apollo has done breaking changes in minor releases, review changelog for any minor release. dequal: possibly spammy, manually review any changes. typescript: project does not follow semver. react-beautiful-dnd: author is on hiatus, manually review any changes.",
+ "//": "@apollo/client: apollo has done breaking changes in minor releases, review changelog for any minor release. dequal: possibly spammy, manually review any changes. typescript: project does not follow semver. react-beautiful-dnd: author is on hiatus, manually review any changes. @deps frontend",
  "name": "my-app",
  "version": "0.1.0",
  "private": true,
